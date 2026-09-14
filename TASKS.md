@@ -21,6 +21,8 @@ pnpm, TypeScript 6.0 strict (D14), tsdown dual CJS/ESM with `exports` map and `.
 
 **Acceptance:** `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` all pass on an empty project.
 
+**Done 2026-09-14.** All four pass. tsdown writes the `exports` map and runs publint and attw during the build: attw reports no problems, and publint only notes the missing `engines.node` (an open question in DECISIONS.md). The build needs `pnpm` on PATH, because the pack step shells out to it.
+
 ### T1.3 — CI pipeline
 GitHub Actions: lint → typecheck → test on Node 22 and 24 (D13). Separate publish workflow triggered on tag, using npm provenance.
 

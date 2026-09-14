@@ -93,6 +93,8 @@ pnpm lint
 pnpm changeset
 ```
 
+`pnpm` must be on PATH, not only reachable through `corepack pnpm`: `pnpm build` shells out to `pnpm pack` for its publint and attw checks. Run `corepack enable` once.
+
 ## Working style
 
 - Work through `TASKS.md` in order. Each task has acceptance criteria — meet them before moving on.
