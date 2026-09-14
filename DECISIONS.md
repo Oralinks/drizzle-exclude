@@ -125,6 +125,20 @@ Decided 2026-09-14. TypeScript 7.0.2 is the latest release, but typescript-eslin
 
 ---
 
+### D15 — Publish with npm trusted publishing, no npm token
+
+Decided 2026-09-14 (T1.3). This is npm's recommended path. No long-lived token lives in repo secrets, and publishing from GitHub-hosted runners generates provenance attestations automatically, which covers the provenance requirement.
+
+Consequences:
+
+- The publish step runs `npm publish`, not `pnpm publish`. Trusted publishing needs npm CLI 11.5.1 or later, and pnpm's publish docs don't cover it.
+- Release builds don't restore a dependency cache (`package-manager-cache: false`), following npm's guidance on cache poisoning.
+- A trusted publisher is added from the package's settings page on npmjs.com, so the package appears to need to exist first. That would make the very first publish manual. Verify this at T5.4.
+- When adding the trusted publisher, allow `npm publish`. Configurations created after 2026-09-03 only allow `npm stage publish` by default.
+- **npm does not generate provenance for packages published from private repositories.** The GitHub repo must be public before 0.1.0 is published.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
