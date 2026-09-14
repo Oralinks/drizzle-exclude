@@ -28,7 +28,7 @@ GitHub Actions: lint → typecheck → test on Node 22 and 24 (D13). Separate pu
 
 **Acceptance:** CI green on the first push. Publish workflow exists but hasn't run.
 
-**In progress 2026-09-14.** `ci.yml` and `publish.yml` are written (publishing approach: D15). Acceptance waits on the GitHub repo existing and a first push.
+**Done 2026-09-15.** First push to the private repo `Oralinks/drizzle-exclude`; CI run 34907412749 passed in 50s. `publish.yml` exists and hasn't run (publishing approach: D15).
 
 ### T1.4 — The failing concurrency test
 The package's central argument. Two tests:
