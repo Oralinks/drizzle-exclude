@@ -144,13 +144,13 @@ This is the actual portfolio signal. The package solves a real problem; the repo
 ## 6. Build plan — roughly 4 weeks part-time
 
 **Week 1 — Foundation**
-Repo scaffold, CI pipeline, Postgres test harness. Write the failing concurrency test *first*: two parallel inserts, both succeed, test goes red. That red test is your README's opening.
+Repo scaffold, CI pipeline, Postgres test harness. Write the concurrency tests *first*: check-then-insert double-books, and the constrained table books exactly once (DECISIONS.md D16, D17). The double-booking output is your README's opening.
 
 **Week 2 — Schema layer**
 `exclude()` builder, range helpers, SQL snapshot tests, `btree_gist` handling. Verify output against hand-written SQL from the Postgres docs.
 
 **Week 3 — Runtime layer**
-`23P01` parsing, typed results, driver adapters, deferrable helper. Concurrency test goes green.
+`23P01` parsing, typed results, driver adapters, deferrable helper. Decide how `40P01` is reported (D16).
 
 **Week 4 — Docs and ship**
 README, `examples/` with a runnable Next.js + Supabase demo, publish `0.1.0`.

@@ -39,10 +39,10 @@ PGlite was evaluated in T1.1 and not adopted. It supports `btree_gist`, but it r
 
 Write the concurrency test **first**, before any implementation:
 - Fire N parallel inserts for the same room and overlapping time range
-- Assert exactly one succeeds and N-1 fail with `23P01`
+- Assert exactly one succeeds and N-1 fail with `23P01` or `40P01`. Under concurrency, Postgres can reject a loser as a deadlock instead of an exclusion violation (D16).
 - Also write the negative control: the same scenario using check-then-insert in application code, demonstrating that it double-books
 
-That failing test is the package's entire argument and the README's opening. Get it red in the first session.
+The negative control, reproducing the race against real Postgres, is the package's entire argument and the README's opening (D17).
 
 ## Scope guardrails
 

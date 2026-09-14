@@ -30,15 +30,17 @@ GitHub Actions: lint → typecheck → test on Node 22 and 24 (D13). Separate pu
 
 **Done 2026-09-15.** First push to the private repo `Oralinks/drizzle-exclude`; CI run 34907412749 passed in 50s. `publish.yml` exists and hasn't run (publishing approach: D15).
 
-### T1.4 — The failing concurrency test
+### T1.4 — The concurrency test
 The package's central argument. Two tests:
 
 1. **Negative control** — check-then-insert in application code. Fire 10 parallel attempts at the same room and overlapping range. Assert that more than one succeeds. This test *passing* proves the race is real.
-2. **The target** — same scenario against a table with an exclusion constraint. Assert exactly one succeeds and the rest fail with SQLSTATE `23P01`. Red for now.
+2. **The target** — same scenario against a table with an exclusion constraint. Assert exactly one succeeds, exactly one row is written, and the rest fail with SQLSTATE `23P01` or `40P01` (D16).
 
 Use hand-written SQL for the constraint at this stage. The builder doesn't exist yet.
 
-**Acceptance:** test 1 green, test 2 red for the right reason. Both run against real Postgres.
+**Acceptance:** both tests green against real Postgres (D17).
+
+**Done 2026-09-15.** The negative control double-books. The guarded table books exactly once, and every loser is rejected with `23P01` or `40P01`. Passed three consecutive local runs against `postgres:18.6-alpine`.
 
 ---
 
@@ -71,10 +73,10 @@ Emits `CREATE EXTENSION IF NOT EXISTS btree_gist`. Clear, actionable error if a 
 
 **Acceptance:** the error message tells the user exactly what to add and where.
 
-### T2.6 — Concurrency test goes green
+### T2.6 — Concurrency test uses the builder
 Replace the hand-written SQL in T1.4 with the builder.
 
-**Acceptance:** test 2 green. Test 1 still passing, still demonstrating the race.
+**Acceptance:** both tests still green (D17). Test 1 still demonstrating the race.
 
 ---
 

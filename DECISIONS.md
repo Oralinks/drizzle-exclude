@@ -139,6 +139,35 @@ Consequences:
 
 ---
 
+### D16 — Concurrent losers fail with `23P01` or `40P01`
+
+Decided 2026-09-15 (T1.4). When conflicting inserts reach an exclusion constraint at the same moment, each can end up waiting on another's uncommitted row. Postgres breaks that cycle by aborting the waiters with `40P01` (`deadlock_detected`) instead of `23P01` (`exclusion_violation`). Which code appears depends on timing.
+
+Measured against `postgres:18.6-alpine`, 10 attempts per round, 3 rounds per pattern, on the guarded table:
+
+| Pattern | Outcome |
+|---|---|
+| All attempts check, then all insert at once | 1 winner per round; 27 × `23P01` |
+| 10 plain `INSERT`s fired together | 1 winner per round; 27 × `23P01` |
+| Check-then-insert, starts staggered 0–50 ms | 1 winner per round; 7 × `23P01`, 9 × `40P01`, 11 rejected by the app's own check |
+
+The first T1.4 run, under CPU load from a parallel typecheck, got 9 × `40P01`.
+
+Every round wrote exactly one booking. So:
+
+- Concurrency tests assert one winner, one row, and every loser failing with `23P01` or `40P01`. Asserting `23P01` alone would be flaky.
+- A `40P01` doesn't name the constraint and carries no conflicting-key `DETAIL`, so the runtime layer can't map it straight to an overlap. How `reserve()` reports it is an open question for T3.
+
+---
+
+### D17 — T1.4's guarded test passes from the start
+
+Decided 2026-09-15. TASKS.md originally wanted the guarded test red at T1.4 while also using a hand-written constraint, which makes it pass. Resolved: keep the hand-written constraint, so the test passes now. The negative control is what demonstrates the race and opens the README. T2.6 replaces the hand-written SQL with `exclude()`, and the test must stay green.
+
+The negative control uses a barrier (every attempt checks before any attempt inserts), so it double-books deterministically: 10 of 10 every round. Without the barrier, attempts staggered by 0–50 ms still double-booked in one of three rounds (5 bookings).
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
@@ -146,3 +175,4 @@ Consequences:
 - Minimum supported Drizzle version — pick the earliest where the `check()` internals match what `exclude()` needs to hook into.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
 - Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
+- How `reserve()` reports `40P01` (D16): retry the insert so the conflict resurfaces as `23P01` with its `DETAIL`, or return a distinct reason. Decide in T3.
