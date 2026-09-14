@@ -1,0 +1,134 @@
+# DECISIONS.md — drizzle-exclude
+
+Locked decisions. Claude Code should not change these without raising it first. Each entry records what was decided and why, so the reasoning survives.
+
+---
+
+### D1 — Package name: `drizzle-exclude`
+
+Checked against the npm registry and available. It's the term someone searches after hitting Drizzle issues #2813 / #3388 / #4939, which is where most early users will come from.
+
+Also free if needed later: `drizzle-exclusion`, `pg-no-overlap`, `pg-exclude`, `overlap-guard`.
+
+---
+
+### D2 — Range bounds default to half-open `[)`
+
+A checkout at 11:00 and a check-in at 11:00 are adjacent, not overlapping. Inclusive upper bounds `[]` make the database reject a perfectly valid back-to-back booking.
+
+Half-open is also PostgreSQL's own default for range constructors, so this matches what the database does anyway. Bounds remain configurable, but the default is `[)` and the docs explain why.
+
+---
+
+### D3 — `timestamptz` only, never `timestamp`
+
+Naive timestamps are the single largest source of booking bugs. A reservation without a timezone is ambiguous the moment anything crosses a zone boundary or a DST shift.
+
+The range helpers accept `timestamptz` columns and reject `timestamp` at the type level. This is deliberately strict: a compile error here prevents a whole category of production bug.
+
+---
+
+### D4 — Constraints are `IMMEDIATE` by default, `DEFERRABLE` opt-in
+
+Immediate is correct for the common case: reject the conflicting insert at the moment it happens.
+
+Deferrable is needed when moving a block of bookings, where intermediate states legitimately overlap before the operation completes. That's a real requirement but a bad default, because deferring pushes failures to commit time where they're harder to handle.
+
+---
+
+### D5 — Constraint naming: `{table}_{columns}_excl`, overridable
+
+Predictable names make runtime error mapping reliable, since `23P01` errors identify themselves by constraint name. An explicit name can always be passed.
+
+---
+
+### D6 — Cancellation handled with a partial `WHERE` clause
+
+Without it, a cancelled booking still occupies the slot — a bug that shows up in production and confuses everyone. The `where` option on `exclude()` supports soft-delete and cancellation columns.
+
+---
+
+### D7 — Runtime failures return results, they don't throw
+
+An overlap is an expected outcome of a booking attempt, not an exceptional one. Callers get a discriminated union:
+
+```ts
+{ ok: true, row } | { ok: false, reason: 'overlap', constraint, conflictingKey }
+```
+
+Throwing is reserved for programmer errors: missing `btree_gist`, malformed configuration, unsupported column types. Those throw immediately with a message that says how to fix it.
+
+---
+
+### D8 — `btree_gist` is surfaced explicitly, never auto-installed
+
+Exclusion constraints that mix an equality column with a range column require the `btree_gist` extension. Without it the constraint fails to create, and the error message doesn't make the cause obvious — a common first-time trip-up.
+
+The package provides a helper that emits `CREATE EXTENSION IF NOT EXISTS btree_gist` into a migration, and a clear error if a constraint needs it and it isn't present. It never silently runs DDL against someone's database.
+
+---
+
+### D9 — `drizzle-orm` is a peer dependency
+
+Users bring their own Drizzle version. Bundling it would cause duplicate-instance problems and version conflicts. Postgres drivers are optional peers for the same reason.
+
+---
+
+### D10 — Tests run against real PostgreSQL
+
+Non-negotiable. The package's claim is about database-enforced behaviour under concurrency. A mocked database cannot demonstrate that, and a test suite that doesn't demonstrate it leaves the package with no argument.
+
+PGlite preferred if it supports `btree_gist`; Docker + Testcontainers otherwise. **This needs verifying in task 1 — it is an open question.**
+
+**T1.1 result (2026-09-14):** PGlite 0.5.8 (PostgreSQL 18.3) loads `btree_gist` 1.8 via `@electric-sql/pglite/contrib/btree_gist`. Verified in a throwaway spike (since deleted):
+
+- An equality + `tstzrange(starts_at, ends_at, '[)')` exclusion constraint with a partial `WHERE (NOT cancelled)` creates and enforces correctly.
+- Overlap is rejected with SQLSTATE `23P01`; the error carries `constraint` and a populated `DETAIL`.
+- Adjacent `[)` ranges are accepted (D2), the same range in a different room is accepted, and a cancelled slot can be re-booked (D6).
+- `DEFERRABLE INITIALLY IMMEDIATE` creates fine (D4).
+- Without the extension, creation fails with `42704: data type uuid has no default operator class for access method "gist"`. That is the message T2.5 needs to translate.
+- `DETAIL` renders timestamps in the session `TimeZone` (it showed `+01`, not UTC). T3.1 parsing must not assume UTC.
+
+**Limitation found:** PGlite runs a single session, so it cannot run concurrent transactions. Ten parallel check-then-insert attempts double-booked 10/10 when check and insert were separate statements, but only 1/10 when each was wrapped in a transaction. PGlite runs the transactions one after another, which hides the race that real Postgres shows under `READ COMMITTED`. `pglite-socket`'s multiplexer shares the same single session and doesn't change this. Docker is not installed on the dev machine.
+
+**Decision (2026-09-14): Docker + Testcontainers for all database tests.** That covers schema, runtime and concurrency tests. The maintainer chose this over a PGlite + real-Postgres hybrid and over PGlite-only. PGlite is not used. Local development needs Docker Desktop; CI uses the Docker engine on GitHub's Ubuntu runners.
+
+---
+
+### D11 — Testing helpers ship in a separate entry point
+
+`drizzle-exclude/testing` keeps the concurrency harness and assertions out of production bundles.
+
+---
+
+### D12 — Build with `tsdown`, not `tsup`
+
+Decided 2026-09-14. tsup's README now says it is no longer actively maintained and recommends tsdown, which has a migration guide from tsup. tsdown covers the same requirements: dual CJS/ESM output, an `exports` map, and emitted `.d.ts`. It is also compatible with publint and arethetypeswrong for checking the published package shape.
+
+---
+
+### D13 — CI tests on Node 22 and 24
+
+Decided 2026-09-14. Node 20 reached end-of-life in April 2026, and the current toolchain no longer runs on it:
+
+- vitest 5: `^22.12.0 || ^24.0.0`
+- tsdown 0.23: `^22.18.0 || ^24.11.0`
+- testcontainers 12: `>=22.22`
+
+This sets the CI and dev matrix only. The published package's `engines` range is a separate question (see open questions).
+
+---
+
+### D14 — TypeScript pinned to 6.0.x
+
+Decided 2026-09-14. TypeScript 7.0.2 is the latest release, but typescript-eslint 8.70 declares `typescript: >=4.8.4 <6.1.0`, so linting would be unsupported on 7. Pin `~6.0.3`, and revisit once typescript-eslint supports 7. tsdown and vitest already accept 7, so lint is the only thing blocking it.
+
+---
+
+## Open questions
+
+- ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
+- ~~Where does the concurrency suite run?~~ Resolved: Docker + Testcontainers everywhere (see D10).
+- Minimum supported Drizzle version — pick the earliest where the `check()` internals match what `exclude()` needs to hook into.
+- Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
+- Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
