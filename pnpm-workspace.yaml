@@ -1,3 +1,10 @@
+allowBuilds:
+  # Pulled in by testcontainers. None need to build for local Docker:
+  # ssh2/cpu-features only matter for ssh:// Docker hosts, and
+  # protobufjs's script is a version check.
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
 minimumReleaseAgeExclude:
   - '@changesets/apply-release-plan@8.1.1'
   - '@changesets/cli@3.0.3'
