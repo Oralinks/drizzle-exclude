@@ -172,7 +172,8 @@ The negative control uses a barrier (every attempt checks before any attempt ins
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
 - ~~Where does the concurrency suite run?~~ Resolved: Docker + Testcontainers everywhere (see D10).
-- Minimum supported Drizzle version — pick the earliest where the `check()` internals match what `exclude()` needs to hook into.
+- **Layer 1 direction (blocks T2.2).** T2.1 found the same thing in 0.45.2 and 1.0.0-beta.22: `pgTable` only accepts Drizzle's own builders, `getTableConfig` silently drops anything else, and drizzle-kit's constraint SQL is hard-coded. A separate package can't make `drizzle-kit generate` emit `EXCLUDE` without workarounds CLAUDE.md rules out. Decide how the schema layer delivers value before building it.
+- Minimum supported Drizzle version — pick the earliest where the `check()` internals match what `exclude()` needs to hook into. T2.1: `check()`, `PgTableExtraConfigValue` and `getTableConfig` are identical in 0.45.2 and 1.0.0-beta.22. The answer depends on the Layer 1 direction.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
 - Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
 - How `reserve()` reports `40P01` (D16): retry the insert so the conflict resurfaces as `23P01` with its `DETAIL`, or return a distinct reason. Decide in T3.

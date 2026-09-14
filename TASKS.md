@@ -51,6 +51,8 @@ Read drizzle-orm's `check()` implementation and its drizzle-kit serializer. Writ
 
 **Acceptance:** the note exists and names the specific files and functions involved.
 
+**Done 2026-09-15.** The note is in the T2.1 PR, read at drizzle-orm 0.45.2 / drizzle-kit 0.31.10 and compared with 1.0.0-beta.22. Finding: Drizzle's hooks are closed to outside packages, so a separate package can't make `drizzle-kit generate` emit `EXCLUDE`. T2.2 waits on the Layer 1 direction (open question in DECISIONS.md).
+
 ### T2.2 — `exclude()` builder
 Table-level constraint builder taking `using`, `with` (column/expression + operator pairs), and optional `where`.
 
