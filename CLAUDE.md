@@ -12,7 +12,7 @@ Primary use case: preventing overlapping bookings at the database level, which i
 
 1. `SCOPE.md` — what is in and out of scope. Do not add anything not listed there.
 2. `DECISIONS.md` — locked technical decisions. Do not re-litigate these. If one looks wrong, raise it, don't silently change it.
-3. **drizzle-orm's `check()` implementation** — in `drizzle-orm/src/pg-core/` and the corresponding drizzle-kit serializer. `check()` is a shipped, table-level constraint that drizzle-kit already emits. `exclude()` should follow that exact pattern. Read it before designing the API. Do not invent a new shape.
+3. **The T2.1 note in PR #1** on drizzle-orm's `check()` and the drizzle-kit serializer. `exclude()`'s builder follows the shape of `check()` and `IndexBuilder`, but it is exported on its own and renders its own SQL, because drizzle-kit can't emit it from a separate package (D18). Do not invent a new shape, and do not work around Drizzle's closed hooks.
 4. PostgreSQL docs on range types and exclusion constraints.
 
 ## Stack

@@ -50,7 +50,7 @@ Three layers. Layer 1 fills the Drizzle gap; layers 2 and 3 are what keep the pa
 
 ### Layer 1 — Schema builder
 
-An `exclude()` helper that fits Drizzle's existing table-definition API:
+An `exclude()` helper defined next to a Drizzle table. It's a separate export, because `pgTable`'s third argument only accepts Drizzle's own builders (DECISIONS.md D18). Illustrative; the final shape is settled in T2.2:
 
 ```ts
 export const bookings = pgTable('bookings', {
@@ -59,20 +59,20 @@ export const bookings = pgTable('bookings', {
   startsAt: timestamp({ withTimezone: true }).notNull(),
   endsAt: timestamp({ withTimezone: true }).notNull(),
   cancelled: boolean().default(false),
-}, (t) => [
-  exclude('bookings_no_overlap', {
-    using: 'gist',
-    with: [
-      [t.roomId, '='],
-      [tstzRange(t.startsAt, t.endsAt), '&&'],
-    ],
-    where: sql`not ${t.cancelled}`,
-  }),
-]);
+});
+
+export const bookingsNoOverlap = exclude(bookings, 'bookings_no_overlap', {
+  using: 'gist',
+  with: [
+    [bookings.roomId, '='],
+    [tstzRange(bookings.startsAt, bookings.endsAt), '&&'],
+  ],
+  where: sql`not ${bookings.cancelled}`,
+});
 ```
 
 Includes:
-- Correct SQL emission for `drizzle-kit generate`
+- The exact `EXCLUDE` DDL, rendered for a `drizzle-kit generate --custom` migration. drizzle-kit can't emit it from a separate package (D18); the upstream PR is the long-term fix.
 - `btree_gist` extension helper (the constraint fails without it — a very common first-time trip-up)
 - Range helpers: `tstzRange`, `dateRange`, `int4Range`, with explicit bound control
 - Partial `WHERE` support, so soft-cancelled rows stop blocking the slot
