@@ -129,6 +129,8 @@ For bulk reschedules where intermediate states legitimately overlap (D4).
 ### T4.1 — `expectNoOverlap()`
 Assertion helper for consumers' own test suites.
 
+**Done 2026-09-15.** `expectNoOverlap()` in `drizzle-exclude/testing` (D28). Unit tests compare its query against hand-written SQL and cover both driver result shapes, the message and the immediate errors. A database test with both drivers lists exactly the clashing pairs (ignoring cancelled, back-to-back, other-room and NULL-room rows), handles a constraint without `WHERE`, an expression element and `limit`, and passes once the clash is removed, after which PostgreSQL accepts the real constraint.
+
 ### T4.2 — Concurrency harness
 Extract the T1.4 machinery into a reusable, documented export under `drizzle-exclude/testing` (D11).
 
