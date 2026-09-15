@@ -1,3 +1,4 @@
+export { type ExclusionKey, type ExclusionViolation, parseExclusionViolation } from './runtime/violation.js';
 export {
   btreeGistSql,
   exclusionMigrationSql,
