@@ -1,0 +1,6 @@
+# This example is its own project, not part of the drizzle-exclude workspace.
+allowBuilds:
+  # Pulled in by testcontainers; none need to build for a local Docker engine.
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
