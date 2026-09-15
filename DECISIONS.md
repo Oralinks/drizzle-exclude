@@ -60,6 +60,8 @@ An overlap is an expected outcome of a booking attempt, not an exceptional one. 
 
 Throwing is reserved for programmer errors: missing `btree_gist`, malformed configuration, unsupported column types. Those throw immediately with a message that says how to fix it.
 
+D25 extends this shape: a `'contention'` outcome for deadlocks, and `value` instead of `row`.
+
 ---
 
 ### D8 — `btree_gist` is surfaced explicitly, never auto-installed
@@ -265,6 +267,31 @@ Values are printed raw: a text value `a, b) "c"='d'` appears unescaped, and time
 
 ---
 
+### D25 — `catchOverlap()` returns overlap or contention, and never retries
+
+Decided 2026-09-15 (T3.2). Recommended options, picked without asking. This resolves D16's open question and extends D7's result shape.
+
+Measured on `postgres:18.6-alpine`: 20 simultaneous conflicting inserts per round, 10 rounds per strategy, retrying `40P01` up to 4 times.
+
+| Strategy | First-attempt `40P01` | Still `40P01` after 4 retries | Rounds where no first attempt succeeded | Average round |
+|---|---|---|---|---|
+| Immediate retry | 20 | 19 | 1 | 9.5 s |
+| Jittered backoff (random wait up to 25 ms, doubling) | 100 | 95 | 5 | 45 s |
+
+Deadlocks depend on timing: an earlier run of 10 attempts × 8 rounds saw none. Every round still wrote exactly one booking.
+
+- **A `40P01` doesn't mean the slot is taken.** Sometimes every contender deadlocks and nobody has booked yet, so it can't be reported as an overlap.
+- **Retrying doesn't reliably clear it.** Retried attempts keep colliding, and each deadlock costs PostgreSQL's one-second `deadlock_timeout`.
+
+So:
+
+- `catchOverlap(write)` takes a Drizzle query, or a function returning one. It resolves to `{ ok: true, value }`, to `{ ok: false, reason: 'overlap', constraint, conflictingKey, violation }` for a `23P01` conflict, or to `{ ok: false, reason: 'contention', error }` for `40P01`. Both errors are found through Drizzle's `DrizzleQueryError` wrapper.
+- It never retries. Only the caller knows whether the unit of work is safe to repeat, and the measurements show retries mostly add latency.
+- Anything else is rethrown unchanged. That includes a `23P01` from adding a constraint over clashing rows (`kind: 'existing-rows'`), which is a migration problem rather than a booking outcome.
+- D7 said `row`. The success field is `value`, because a write can resolve to anything, such as the array `.returning()` gives.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
@@ -273,4 +300,4 @@ Values are printed raw: a text value `a, b) "c"='d'` appears unescaped, and time
 - Minimum supported Drizzle version. T2.1 found `check()`, `PgTableExtraConfigValue` and `getTableConfig` identical in 0.45.2 and 1.0.0-beta.22. Under D18 the package doesn't hook into drizzle-kit, so pick the earliest versions the builder compiles and tests against. T2.2 sets a provisional peer range of `^0.45.2`, the only version tested so far. Widen it once CI tests older releases or the 1.0 beta.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
 - Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
-- How `reserve()` reports `40P01` (D16): retry the insert so the conflict resurfaces as `23P01` with its `DETAIL`, or return a distinct reason. Decide in T3.
+- ~~How `reserve()` reports `40P01`~~ Resolved: a distinct `'contention'` result, with no automatic retry (D25).

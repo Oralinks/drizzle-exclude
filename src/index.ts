@@ -1,3 +1,10 @@
+export {
+  catchOverlap,
+  type ExclusionContention,
+  type ExclusionOverlap,
+  type ExclusionResult,
+  type ExclusionSuccess,
+} from './runtime/result.js';
 export { type ExclusionKey, type ExclusionViolation, parseExclusionViolation } from './runtime/violation.js';
 export {
   btreeGistSql,
