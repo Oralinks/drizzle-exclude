@@ -136,6 +136,8 @@ Extract the T1.4 machinery into a reusable, documented export under `drizzle-exc
 
 **Acceptance:** an outside project can import it and test its own tables. Verify by using it in `examples/`.
 
+**Done 2026-09-15.** `raceAttempts()` in `drizzle-exclude/testing` (D29), now used by the package's own concurrency test. `examples/testing-harness/` installs the packed tarball, imports only by package name, and tests its own hot-desk table: the harness exposes check-then-insert double-booking, and with the constraint applied exactly one of eight simultaneous reservations wins. Checked locally; not in CI yet (T5.2).
+
 ---
 
 ## Phase 5 — Docs and ship
