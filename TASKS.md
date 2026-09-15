@@ -152,6 +152,8 @@ Opens with the race condition, not the install command. Structure: the problem �
 ### T5.2 — `examples/`
 Runnable Next.js + Supabase booking demo. Minimal UI. Must use the published API surface, not internal imports.
 
+**Done 2026-09-15.** `examples/nextjs-supabase/` (D30), installed from the packed tarball. Checked locally against PostgreSQL 18.6: both migrations applied, `next build` passed, and in a browser a booking succeeded, an overlapping booking was refused, and ten simultaneous bookings for one slot gave exactly one. Not yet run against a hosted Supabase project.
+
 ### T5.3 — JSDoc pass
 Every exported symbol, each with a runnable example.
 

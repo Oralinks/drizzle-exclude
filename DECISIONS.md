@@ -358,6 +358,19 @@ Decided 2026-09-15 (T4.2). Recommended options, picked without asking.
 
 ---
 
+### D30 — The Next.js + Supabase demo runs against any PostgreSQL and checks for `btree_gist`
+
+Decided 2026-09-15 (T5.2). Recommended options, picked without asking.
+
+- `examples/nextjs-supabase/` is a standalone Next.js 16 App Router app (React 19) with its own `pnpm-workspace.yaml`, outside the package's build. It installs `drizzle-exclude` from the packed tarball and uses only the public API.
+- **Connection** follows Supabase's Drizzle guide: postgres.js with `prepare: false`, because the transaction pooler doesn't support prepared statements. `DATABASE_URL` is for the app and `DIRECT_DATABASE_URL` for migrations. Any other PostgreSQL works with the same variables.
+- **Migrations:** drizzle-kit generated `0000`. `0001` was created with `drizzle-kit generate --custom` and filled from `exclusionMigrationSql(…, { btreeGist: 'require' })`. Supabase enables extensions from its dashboard, into its `extensions` schema, so the migration checks for `btree_gist` rather than creating it in `public`.
+- **The page** has a booking form, whose server action wraps the insert in `catchOverlap()`, and a button that sends ten bookings for the same slot simultaneously over the pool's connections.
+- **`esbuild`** may run its install script, because drizzle-kit loads the TypeScript schema with it.
+- **Verified locally** against `postgres:18.6-alpine`: installed from the tarball, both migrations applied with `drizzle-kit migrate`, `next build` succeeded, and in a real browser a booking succeeded, an overlapping one was refused ("already booked"), and the ten-at-once button produced 1 booked and 9 refused. It hasn't been run against a hosted Supabase project yet, and examples don't run in CI.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
