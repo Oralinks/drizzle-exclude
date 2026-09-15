@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm trusted publishing (OIDC); provenance is generated automatically (D15)
+  id-token: write # signs the provenance statement, and lets npm use trusted publishing once it's set up (D15, D33)
 
 jobs:
   publish:
@@ -26,4 +26,10 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       # npm, not pnpm: trusted publishing needs npm CLI >= 11.5.1.
-      - run: npm publish
+      - run: npm install --global npm@11
+      # The first release can't use trusted publishing, because npm only lets you set it up on a
+      # package that already exists. It uses the NPM_TOKEN secret instead; npm prefers trusted
+      # publishing whenever it's configured, so the secret can be deleted afterwards (D33).
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

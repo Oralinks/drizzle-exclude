@@ -12,7 +12,7 @@ The test file shows two things:
 You need Docker running and `pnpm` on your PATH.
 
 ```bash
-pnpm pack-local   # builds drizzle-exclude and packs it here as drizzle-exclude-0.0.0.tgz
+pnpm pack-local   # builds drizzle-exclude and packs it here as drizzle-exclude-0.1.0.tgz
 pnpm install
 pnpm test
 ```

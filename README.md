@@ -37,8 +37,6 @@ Drizzle can't declare exclusion constraints ([#2813](https://github.com/drizzle-
 
 ## Install
 
-> **Pre-release.** `drizzle-exclude` isn't on npm yet; the first release is `0.1.0`.
-
 ```bash
 npm install drizzle-exclude drizzle-orm
 ```
