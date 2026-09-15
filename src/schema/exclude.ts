@@ -1,6 +1,7 @@
 import { entityKind, getTableName, is, SQL } from 'drizzle-orm';
 import { type AnyPgColumn, PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { fail } from './fail.js';
+import { identifierBytes, MAX_IDENTIFIER_BYTES } from './identifiers.js';
 import { RangeExpression } from './ranges.js';
 
 /**
@@ -104,7 +105,9 @@ export class ExclusionConstraint<TTable extends PgTable = PgTable> {
 
 const INDEX_METHODS: readonly string[] = ['gist', 'spgist', 'btree', 'hash'] satisfies ExcludeIndexMethod[];
 const DEFERRABLE_MODES: readonly string[] = ['immediate', 'deferred'];
-const MAX_IDENTIFIER_BYTES = 63;
+// Operators are written into the SQL as given, so only PostgreSQL operator syntax is allowed:
+// a run of operator characters, or OPERATOR(schema.op).
+const OPERATOR = /^(?:[+*/<>=~!@#%^&|`?-]+|OPERATOR\(\s*(?:[A-Za-z_][A-Za-z0-9_$]*\s*\.\s*)?[+*/<>=~!@#%^&|`?-]+\s*\))$/;
 
 function isArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
@@ -155,7 +158,7 @@ export function exclude<TTable extends PgTable>(table: TTable, config: ExcludeCo
     if (typeof nameValue !== 'string' || nameValue.trim() === '') {
       fail(`exclude() on "${tableName}": \`name\` must be a non-empty string, or left out to use the default name.`);
     }
-    const bytes = new TextEncoder().encode(nameValue).length;
+    const bytes = identifierBytes(nameValue);
     if (bytes > MAX_IDENTIFIER_BYTES) {
       fail(
         `exclude() on "${tableName}": the name "${nameValue}" is ${String(bytes)} bytes. PostgreSQL truncates names over ${String(MAX_IDENTIFIER_BYTES)} bytes, so errors would report a different name. Use a shorter name.`,
@@ -200,8 +203,10 @@ export function exclude<TTable extends PgTable>(table: TTable, config: ExcludeCo
       );
     }
 
-    if (typeof operator !== 'string' || operator.trim() === '') {
-      fail(`exclude() on "${tableName}": ${position} needs an operator, such as '=' or '&&'.`);
+    if (typeof operator !== 'string' || !OPERATOR.test(operator)) {
+      fail(
+        `exclude() on "${tableName}": ${position} needs an operator, such as '=', '&&' or 'OPERATOR(pg_catalog.=)', not ${JSON.stringify(operator)}.`,
+      );
     }
   });
 

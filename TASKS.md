@@ -74,6 +74,8 @@ Cover: simple range-only exclusion; equality + range with `btree_gist`; partial 
 
 **Acceptance:** every snapshot matches hand-verified SQL. Each generated statement has been run against a real database and created a working constraint.
 
+**Done 2026-09-15.** `exclusionConstraintSql()` renders one `ALTER TABLE … ADD CONSTRAINT` statement (D22). Unit tests compare against SQL written by hand from the PostgreSQL docs' grammar and examples. A database test runs every case (range-only, equality plus range with `btree_gist`, partial `WHERE`, an inlined `WHERE` parameter, and deferred with a custom name on a schema-qualified table), checks `pg_constraint`, and proves each constraint rejects an overlap.
+
 ### T2.5 — `btree_gist` helper
 Emits `CREATE EXTENSION IF NOT EXISTS btree_gist`. Clear, actionable error if a constraint needs it and it's absent. Never runs DDL on its own (D8).
 
