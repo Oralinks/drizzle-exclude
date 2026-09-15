@@ -5,11 +5,11 @@ import { sql } from 'drizzle-orm';
 import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
 import { boolean, integer, type PgDatabase, type PgQueryResultHKT, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import { drizzle as drizzlePostgresJs } from 'drizzle-orm/postgres-js';
-import pg from 'pg';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { exclude, type ExclusionConstraint, exclusionMigrationSql, tstzRange } from '../../src/index.js';
 import { expectNoOverlap, type ExpectNoOverlapOptions } from '../../src/testing/index.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 
@@ -69,7 +69,7 @@ const drivers: { name: string; database: string; connect(url: string): Connectio
     name: 'pg',
     database: 'overlaps_pg',
     connect(url) {
-      const pool = new pg.Pool({ connectionString: url });
+      const pool = testPool({ connectionString: url });
       return { ...operations(drizzleNodePg({ client: pool, casing: 'snake_case' })), end: () => pool.end() };
     },
   },
@@ -93,11 +93,11 @@ function databaseUrl(database: string): string {
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  const admin = new pg.Pool({ connectionString: container.getConnectionUri() });
+  const admin = testPool({ connectionString: container.getConnectionUri() });
   try {
     for (const driver of drivers) {
       await admin.query(`CREATE DATABASE ${driver.database}`);
-      const setup = new pg.Pool({ connectionString: databaseUrl(driver.database) });
+      const setup = testPool({ connectionString: databaseUrl(driver.database) });
       try {
         await setup.query(SETUP_SQL);
       } finally {

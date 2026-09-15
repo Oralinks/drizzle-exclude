@@ -6,6 +6,7 @@ import { bigint, boolean, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { exclude, exclusionMigrationSql, tstzRange } from '../src/index.js';
+import { testPool } from './support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ATTEMPTS = 10;
@@ -39,7 +40,7 @@ const bookingsNoOverlap = exclude(bookingsGuarded, {
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  pool = new pg.Pool({ connectionString: container.getConnectionUri(), max: ATTEMPTS + 2 });
+  pool = testPool({ connectionString: container.getConnectionUri(), max: ATTEMPTS + 2 });
   // The tables are what drizzle-kit would create. The guarded table's constraint, and the
   // btree_gist it needs, come from the package's migration SQL rather than hand-written DDL.
   await pool.query(`

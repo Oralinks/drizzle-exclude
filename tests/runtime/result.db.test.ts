@@ -7,6 +7,7 @@ import { pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { catchOverlap, exclude, exclusionMigrationSql, tstzRange } from '../../src/index.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ROOM_A = '11111111-1111-1111-1111-111111111111';
@@ -34,7 +35,7 @@ let db: NodePgDatabase;
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  pool = new pg.Pool({ connectionString: container.getConnectionUri(), max: 12 });
+  pool = testPool({ connectionString: container.getConnectionUri(), max: 12 });
   db = drizzle({ client: pool, casing: 'snake_case' });
   await pool.query(`
     CREATE TABLE bookings (
