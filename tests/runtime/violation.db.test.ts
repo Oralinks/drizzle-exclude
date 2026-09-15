@@ -1,11 +1,22 @@
 // T3.1: produce each exclusion-violation shape live in PostgreSQL and parse it.
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { DrizzleQueryError } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { boolean, pgSchema, serial, timestamp, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parseExclusionViolation } from '../../src/index.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ROOM = '11111111-1111-1111-1111-111111111111';
+
+const appBookings = pgSchema('app').table('bookings', {
+  id: serial().primaryKey(),
+  roomId: uuid('room_id').notNull(),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  cancelled: boolean().notNull().default(false),
+});
 
 let container: StartedPostgreSqlContainer | undefined;
 let pool: pg.Pool;
@@ -70,6 +81,24 @@ describe('parseExclusionViolation() on live PostgreSQL errors', () => {
         existing: `${ROOM}, ["2026-03-01 10:00:00+00","2026-03-01 11:00:00+00")`,
       },
       detail: expect.stringMatching(/^Key \(room_id, /) as unknown,
+    });
+  });
+
+  it('a conflicting insert thrown through Drizzle, wrapped in DrizzleQueryError', async () => {
+    const db = drizzle({ client: pool });
+    const error = await errorFrom(
+      db.insert(appBookings).values({
+        roomId: ROOM,
+        startsAt: new Date('2026-03-01T10:15:00Z'),
+        endsAt: new Date('2026-03-01T10:45:00Z'),
+      }),
+    );
+
+    expect(error).toBeInstanceOf(DrizzleQueryError);
+    expect(parseExclusionViolation(error)).toMatchObject({
+      kind: 'conflict',
+      constraint: 'bookings_room_id_starts_at_ends_at_excl',
+      conflictingKey: { attempted: `${ROOM}, ["2026-03-01 10:15:00+00","2026-03-01 10:45:00+00")` },
     });
   });
 

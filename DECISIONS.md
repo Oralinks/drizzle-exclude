@@ -258,6 +258,7 @@ Values are printed raw: a text value `a, b) "c"='d'` appears unescaped, and time
 
 - `parseExclusionViolation(error)` returns `undefined` for anything that isn't SQLSTATE `23P01`, including `40P01` (D16), and never throws.
 - It reads `pg`'s field names (`constraint`, `table`, `schema`) and postgres.js's (`constraint_name`, `table_name`, `schema_name`); T3.3 tests both drivers. If the constraint field is missing, the name comes from the message.
+- **Fixed after T3.1 merged:** drizzle-orm 0.45.2 wraps every failing query in `DrizzleQueryError`, with the driver error as `cause`. The first version only looked at the top-level error, so it returned `undefined` for every error thrown through a Drizzle query. The parser now follows `cause`, up to 5 levels, to find the PostgreSQL error. A database test inserts through Drizzle's `node-postgres` driver to prove it.
 - `kind` is `'conflict'` for a rejected write and `'existing-rows'` when adding the constraint failed.
 - `conflictingKey` is `{ columns, attempted, existing }`, or `undefined` when `DETAIL` leaves the key out or has an unexpected shape. `columns` is split per element, respecting parentheses and quotes, because the column list is valid SQL. `attempted` and `existing` each stay one string, because raw values can contain commas, brackets and quotes, so no split would be reliable.
 - It's exported from the main entry point. A separate `./runtime` entry isn't needed yet.

@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { parseExclusionViolation } from '../../src/index.js';
 import {
@@ -126,5 +127,29 @@ describe('parseExclusionViolation() with other errors', () => {
     ['a string', '23P01'],
   ])('returns undefined for %s', (_, error) => {
     expect(parseExclusionViolation(error)).toBeUndefined();
+  });
+});
+
+describe('parseExclusionViolation() with errors thrown through Drizzle', () => {
+  /** A driver error as pg throws it: an Error carrying PostgreSQL's fields. */
+  const driverError = (fields: typeof conflictingInsert) => Object.assign(new Error(fields.message), fields);
+
+  it('finds the violation inside DrizzleQueryError', () => {
+    const wrapped = new DrizzleQueryError('insert into "bookings" (...) values (...)', [], driverError(conflictingInsert));
+
+    expect(parseExclusionViolation(wrapped)).toEqual(parseExclusionViolation(conflictingInsert));
+  });
+
+  it('ignores a wrapped deadlock', () => {
+    const wrapped = new DrizzleQueryError('insert ...', [], driverError({ ...conflictingInsert, code: '40P01' }));
+
+    expect(parseExclusionViolation(wrapped)).toBeUndefined();
+  });
+
+  it('stops following a cause that loops back on itself', () => {
+    const looped: { cause?: unknown } = {};
+    looped.cause = looped;
+
+    expect(parseExclusionViolation(looped)).toBeUndefined();
   });
 });
