@@ -181,12 +181,24 @@ The consequence: the schema file holds the constraint's definition, but applying
 
 ---
 
+### D19 — `exclude()` takes the table and a config object
+
+Decided 2026-09-15 (T2.2). `exclude(table, { name?, using, with, where?, deferrable? })` returns an `ExclusionConstraint`. Chosen over a chained builder (`exclude(name).on(table).using(…)`): it mirrors `pgPolicy(name, config)` and keeps everything the SQL needs in one typed object.
+
+- `name` is optional. D5's default name is worked out when SQL is rendered (T2.4), because it needs the range helpers (T2.3) to report which columns they use.
+- `using` only allows the index methods that can back an exclusion constraint: `gist`, `spgist`, `btree`, `hash`. GIN and BRIN can't.
+- `with` is a non-empty list of `[column or sql expression, operator]` pairs. Columns must belong to the same table. The types check the table name; the runtime check compares the table itself, which also catches a same-named table in another schema.
+- `deferrable: 'immediate' | 'deferred'` becomes `DEFERRABLE INITIALLY IMMEDIATE` or `DEFERRABLE INITIALLY DEFERRED`. Leaving it out gives a non-deferrable constraint (D4).
+- Invalid configuration throws immediately with a message saying how to fix it. That includes names over PostgreSQL's 63-byte identifier limit, which PostgreSQL would silently truncate, breaking D5's error mapping.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
 - ~~Where does the concurrency suite run?~~ Resolved: Docker + Testcontainers everywhere (see D10).
 - ~~Layer 1 direction~~ Resolved: D18.
-- Minimum supported Drizzle version. T2.1 found `check()`, `PgTableExtraConfigValue` and `getTableConfig` identical in 0.45.2 and 1.0.0-beta.22. Under D18 the package doesn't hook into drizzle-kit, so pick the earliest versions T2.2's builder compiles and tests against.
+- Minimum supported Drizzle version. T2.1 found `check()`, `PgTableExtraConfigValue` and `getTableConfig` identical in 0.45.2 and 1.0.0-beta.22. Under D18 the package doesn't hook into drizzle-kit, so pick the earliest versions the builder compiles and tests against. T2.2 sets a provisional peer range of `^0.45.2`, the only version tested so far. Widen it once CI tests older releases or the 1.0 beta.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
 - Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
 - How `reserve()` reports `40P01` (D16): retry the insert so the conflict resurfaces as `23P01` with its `DETAIL`, or return a distinct reason. Decide in T3.
