@@ -371,6 +371,17 @@ Decided 2026-09-15 (T5.2). Recommended options, picked without asking.
 
 ---
 
+### D31 — Every JSDoc example is typechecked against the real API
+
+Decided 2026-09-15 (T5.3). Recommended option, picked without asking.
+
+- `tests/docs/jsdoc-examples.test.ts` reads the exports of `drizzle-exclude` and `drizzle-exclude/testing` from their entry points and fails if any lacks JSDoc with an `@example`. It then compiles every example with the TypeScript compiler API against the package's own source, in memory, without writing files.
+- Examples stay short. A small prelude declares the names they assume: an imagined app's `db`, `bookings`, `bookingsNoOverlap`, `roomId` and similar, the package's functions and types, and `test` and `expect`. An example's own imports and declarations take precedence.
+- "Runnable" therefore means the code is valid against the real types, with only the prelude's names assumed. Examples aren't executed; behaviour is covered by the test suite.
+- Reviewing the examples before writing the test found four that couldn't compile. `catchOverlap`'s and `ExclusionContention`'s examples used `return` outside a function; `ExclusionContention`'s also used `409` where the README uses `503`. `needsBtreeGist`'s used an undefined `during`, and `ExcludeElement`'s referred to a `bookings.code` column that doesn't exist. All four are fixed.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).

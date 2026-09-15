@@ -157,6 +157,8 @@ Runnable Next.js + Supabase booking demo. Minimal UI. Must use the published API
 ### T5.3 — JSDoc pass
 Every exported symbol, each with a runnable example.
 
+**Done 2026-09-15.** Every public export has JSDoc with an `@example`, and `tests/docs/jsdoc-examples.test.ts` compiles every example against the real API (D31), so a stale example now fails CI. Four examples that couldn't compile were fixed.
+
 ### T5.4 — Publish 0.1.0
 Changeset, tag, publish workflow with provenance.
 
