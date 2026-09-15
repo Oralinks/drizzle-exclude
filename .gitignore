@@ -5,6 +5,7 @@ coverage/
 *.log
 .env
 .env.*
+!.env.example
 .DS_Store
 *.tgz
 examples/*/pnpm-lock.yaml

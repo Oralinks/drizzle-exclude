@@ -173,6 +173,11 @@ test('ten guests booking the same room at once get one booking', async () => {
 
 Every behaviour is tested against real PostgreSQL in Docker, never a mock. That covers the race above, every generated SQL statement (each one is run and must reject an overlap), both drivers, deferred constraints and the testing helpers. [`DECISIONS.md`](DECISIONS.md) records each design choice with the measurements behind it.
 
+## Examples
+
+- [`examples/nextjs-supabase`](examples/nextjs-supabase): a Next.js app that books rooms on Supabase or any PostgreSQL, with a button that sends ten bookings for the same slot at once.
+- [`examples/testing-harness`](examples/testing-harness): an outside project that tests its own table with `drizzle-exclude/testing`.
+
 ## License
 
 MIT
