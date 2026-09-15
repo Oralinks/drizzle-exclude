@@ -168,11 +168,25 @@ The negative control uses a barrier (every attempt checks before any attempt ins
 
 ---
 
+### D18 — Layer 1 renders SQL for custom migrations; upstream PR in parallel
+
+Decided 2026-09-15, after T2.1 (PR #1). A separate package can't make drizzle-kit emit `EXCLUDE`. `pgTable` only accepts Drizzle's own builders, `getTableConfig` drops anything else, and drizzle-kit's constraint SQL is hard-coded. This is the same in 0.45.2 and 1.0.0-beta.22.
+
+- `exclude()` is defined in TypeScript as its own export next to its table, not inside `pgTable`'s third argument, which rejects it. The builder follows the shape of `check()` and `IndexBuilder`.
+- The package renders the exact `EXCLUDE` DDL, plus `CREATE EXTENSION IF NOT EXISTS btree_gist` (D8), for a `drizzle-kit generate --custom` migration. No CLI (CLAUDE.md scope guardrails).
+- No workarounds against Drizzle internals: no subclassing `CheckBuilder`, no fake index builders, no patching `getTableConfig`.
+- The upstream drizzle-orm and drizzle-kit PR (T6.3) is the real fix. It runs alongside the package instead of waiting for Phase 6, most likely against Drizzle's `beta` branch.
+
+The consequence: the schema file holds the constraint's definition, but applying it still takes a custom migration until Drizzle supports `exclude()` natively.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
 - ~~Where does the concurrency suite run?~~ Resolved: Docker + Testcontainers everywhere (see D10).
-- Minimum supported Drizzle version — pick the earliest where the `check()` internals match what `exclude()` needs to hook into.
+- ~~Layer 1 direction~~ Resolved: D18.
+- Minimum supported Drizzle version. T2.1 found `check()`, `PgTableExtraConfigValue` and `getTableConfig` identical in 0.45.2 and 1.0.0-beta.22. Under D18 the package doesn't hook into drizzle-kit, so pick the earliest versions T2.2's builder compiles and tests against.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
 - Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
 - How `reserve()` reports `40P01` (D16): retry the insert so the conflict resurfaces as `23P01` with its `DETAIL`, or return a distinct reason. Decide in T3.

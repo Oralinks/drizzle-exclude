@@ -51,10 +51,12 @@ Read drizzle-orm's `check()` implementation and its drizzle-kit serializer. Writ
 
 **Acceptance:** the note exists and names the specific files and functions involved.
 
-### T2.2 — `exclude()` builder
-Table-level constraint builder taking `using`, `with` (column/expression + operator pairs), and optional `where`.
+**Done 2026-09-15.** The note is in the T2.1 PR, read at drizzle-orm 0.45.2 / drizzle-kit 0.31.10 and compared with 1.0.0-beta.22. Finding: Drizzle's hooks are closed to outside packages, so a separate package can't make `drizzle-kit generate` emit `EXCLUDE`. Layer 1 direction decided in D18.
 
-**Acceptance:** compiles, integrates with `pgTable`'s third argument, fully typed, no `any` in the signature.
+### T2.2 — `exclude()` builder
+Constraint builder for a table, exported on its own next to that table rather than inside `pgTable`'s third argument (D18). Takes `using`, `with` (column/expression + operator pairs), and optional `where`.
+
+**Acceptance:** compiles, accepts a `pgTable` and its columns, fully typed, no `any` in the signature.
 
 ### T2.3 — Range helpers
 `tstzRange`, `dateRange`, `int4Range`, with bound control defaulting to `[)` per D2. `tstzRange` rejects naive `timestamp` columns at the type level per D3.
@@ -62,7 +64,7 @@ Table-level constraint builder taking `using`, `with` (column/expression + opera
 **Acceptance:** a `timestamp` column passed to `tstzRange` is a compile error, with a test asserting it (`expectTypeOf` or equivalent).
 
 ### T2.4 — SQL generation and snapshot tests
-Emit correct DDL. Snapshots compare against SQL taken from the PostgreSQL documentation, not against our own output.
+Render correct DDL for a `drizzle-kit generate --custom` migration (D18). Snapshots compare against SQL taken from the PostgreSQL documentation, not against our own output.
 
 Cover: simple range-only exclusion; equality + range with `btree_gist`; partial `WHERE`; deferrable; custom constraint name.
 
@@ -74,7 +76,7 @@ Emits `CREATE EXTENSION IF NOT EXISTS btree_gist`. Clear, actionable error if a 
 **Acceptance:** the error message tells the user exactly what to add and where.
 
 ### T2.6 — Concurrency test uses the builder
-Replace the hand-written SQL in T1.4 with the builder.
+Replace the hand-written SQL in T1.4 with SQL rendered by the builder.
 
 **Acceptance:** both tests still green (D17). Test 1 still demonstrating the race.
 
@@ -148,6 +150,8 @@ Short, useful, no marketing. Describe what it does and link it.
 
 ### T6.3 — Open a PR to drizzle-orm
 Implement `exclude()` upstream, following the `check()` pattern from T2.1. Highest-value item in the whole plan — a merged PR to a repo that size outweighs the package itself.
+
+Per D18 this can start any time after T2.1 rather than waiting for Phase 6. Most likely target: Drizzle's `beta` branch.
 
 ### T6.4 — Add to oralinks.org
 Link npm → GitHub → the post, next to the Innosan work.
