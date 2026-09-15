@@ -88,6 +88,8 @@ Replace the hand-written SQL in T1.4 with SQL rendered by the builder.
 
 **Acceptance:** both tests still green (D17). Test 1 still demonstrating the race.
 
+**Done 2026-09-15.** The guarded table is declared with Drizzle, its constraint with `exclude()` and `tstzRange()`, and `exclusionMigrationSql()` applies it together with `btree_gist`. The only hand-written SQL left is the `CREATE TABLE`s, which drizzle-kit would generate. Both tests still pass: the negative control double-books, and the guarded table books exactly once.
+
 ---
 
 ## Phase 3 — Runtime layer

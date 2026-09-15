@@ -1,8 +1,11 @@
 // T1.4: the package's central argument, run against real PostgreSQL.
-// The exclusion constraint is hand-written SQL for now; T2.6 replaces it with the exclude() builder.
+// T2.6: the guarded table's constraint is defined with exclude() and applied with exclusionMigrationSql().
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { sql } from 'drizzle-orm';
+import { bigint, boolean, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { exclude, exclusionMigrationSql, tstzRange } from '../src/index.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ATTEMPTS = 10;
@@ -16,12 +19,30 @@ type Outcome = { ok: true } | { ok: false; code: string | undefined };
 let container: StartedPostgreSqlContainer | undefined;
 let pool: pg.Pool;
 
+const bookingsGuarded = pgTable('bookings_guarded', {
+  id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  roomId: uuid().notNull(),
+  startsAt: timestamp({ withTimezone: true }).notNull(),
+  endsAt: timestamp({ withTimezone: true }).notNull(),
+  cancelled: boolean().notNull().default(false),
+});
+
+const bookingsNoOverlap = exclude(bookingsGuarded, {
+  name: 'bookings_guarded_no_overlap',
+  using: 'gist',
+  with: [
+    [bookingsGuarded.roomId, '='],
+    [tstzRange(bookingsGuarded.startsAt, bookingsGuarded.endsAt), '&&'],
+  ],
+  where: sql`not ${bookingsGuarded.cancelled}`,
+});
+
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
   pool = new pg.Pool({ connectionString: container.getConnectionUri(), max: ATTEMPTS + 2 });
+  // The tables are what drizzle-kit would create. The guarded table's constraint, and the
+  // btree_gist it needs, come from the package's migration SQL rather than hand-written DDL.
   await pool.query(`
-    CREATE EXTENSION IF NOT EXISTS btree_gist;
-
     CREATE TABLE bookings_unguarded (
       id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       room_id uuid NOT NULL,
@@ -35,13 +56,10 @@ beforeAll(async () => {
       room_id uuid NOT NULL,
       starts_at timestamptz NOT NULL,
       ends_at timestamptz NOT NULL,
-      cancelled boolean NOT NULL DEFAULT false,
-      CONSTRAINT bookings_guarded_no_overlap EXCLUDE USING gist (
-        room_id WITH =,
-        tstzrange(starts_at, ends_at, '[)') WITH &&
-      ) WHERE (NOT cancelled)
+      cancelled boolean NOT NULL DEFAULT false
     );
   `);
+  await pool.query(exclusionMigrationSql([bookingsNoOverlap], { casing: 'snake_case' }));
 });
 
 afterAll(async () => {
