@@ -41,9 +41,41 @@ function columnsOf(element: ExcludeElement<ExclusionConstraint['table']>): AnyPg
 }
 
 /**
+ * The constraint's name: its `name`, or D5's default `{table}_{columns}_excl`, built from the
+ * database names of the columns in `with`. Internal; not exported from the package entry point.
+ */
+export function exclusionConstraintName(
+  constraint: ExclusionConstraint,
+  options: ExclusionConstraintSqlOptions = {},
+): string {
+  const { config, table } = constraint;
+  if (config.name !== undefined) {
+    return config.name;
+  }
+
+  const casingCache = new CasingCache(options.casing);
+  // `with` columns only, like PostgreSQL's own naming; WHERE columns don't count.
+  const referenced = new Set<string>();
+  for (const [element] of config.with) {
+    for (const column of columnsOf(element)) {
+      referenced.add(casingCache.getColumnCasing(column));
+    }
+  }
+
+  const name = [getTableConfig(table).name, ...referenced, 'excl'].join('_');
+  const bytes = identifierBytes(name);
+  if (bytes > MAX_IDENTIFIER_BYTES) {
+    fail(
+      `the default constraint name "${name}" is ${String(bytes)} bytes, over PostgreSQL's ${String(MAX_IDENTIFIER_BYTES)}-byte limit. Pass a shorter \`name\` to exclude().`,
+    );
+  }
+  return name;
+}
+
+/**
  * Renders an exclusion constraint as one `ALTER TABLE … ADD CONSTRAINT … EXCLUDE …;` statement,
  * ready to paste into a `drizzle-kit generate --custom` migration. drizzle-kit can't emit
- * exclusion constraints itself (D18).
+ * exclusion constraints itself (D18). To also handle `btree_gist`, use {@link exclusionMigrationSql}.
  *
  * Columns are written without their table name, with `casing` applied. Ranges and other
  * expressions are wrapped in parentheses, and query parameters are inlined, because DDL
@@ -67,7 +99,6 @@ export function exclusionConstraintSql(
 ): string {
   const { casing } = options;
   const dialect = new PgDialect(casing === undefined ? undefined : { casing });
-  const casingCache = new CasingCache(casing);
   const { config, table } = constraint;
   const { name: tableName, schema } = getTableConfig(table);
 
@@ -84,21 +115,7 @@ export function exclusionConstraintSql(
     return `${render(sql`${element}`)} WITH ${operator}`;
   });
 
-  // The default name uses `with` columns only, like PostgreSQL's own naming; WHERE columns don't count.
-  const referenced = new Set<string>();
-  for (const [element] of config.with) {
-    for (const column of columnsOf(element)) {
-      referenced.add(casingCache.getColumnCasing(column));
-    }
-  }
-
-  const name = config.name ?? [tableName, ...referenced, 'excl'].join('_');
-  if (config.name === undefined && identifierBytes(name) > MAX_IDENTIFIER_BYTES) {
-    fail(
-      `exclusionConstraintSql(): the default name "${name}" is ${String(identifierBytes(name))} bytes, over PostgreSQL's ${String(MAX_IDENTIFIER_BYTES)}-byte limit. Pass a shorter \`name\` to exclude().`,
-    );
-  }
-
+  const name = exclusionConstraintName(constraint, options);
   const target =
     schema === undefined ? dialect.escapeName(tableName) : `${dialect.escapeName(schema)}.${dialect.escapeName(tableName)}`;
 

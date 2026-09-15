@@ -1,4 +1,10 @@
 export {
+  btreeGistSql,
+  exclusionMigrationSql,
+  type ExclusionMigrationSqlOptions,
+  needsBtreeGist,
+} from './schema/btree-gist.js';
+export {
   exclude,
   type ExcludeConfig,
   type ExcludeElement,
