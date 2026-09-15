@@ -26,6 +26,8 @@ Naive timestamps are the single largest source of booking bugs. A reservation wi
 
 The range helpers accept `timestamptz` columns and reject `timestamp` at the type level. This is deliberately strict: a compile error here prevents a whole category of production bug.
 
+Drizzle's types can't tell the two timestamp kinds apart, so D20 enforces this with types plus an immediate runtime check.
+
 ---
 
 ### D4 — Constraints are `IMMEDIATE` by default, `DEFERRABLE` opt-in
@@ -190,6 +192,26 @@ Decided 2026-09-15 (T2.2). `exclude(table, { name?, using, with, where?, deferra
 - `with` is a non-empty list of `[column or sql expression, operator]` pairs. Columns must belong to the same table. The types check the table name; the runtime check compares the table itself, which also catches a same-named table in another schema.
 - `deferrable: 'immediate' | 'deferred'` becomes `DEFERRABLE INITIALLY IMMEDIATE` or `DEFERRABLE INITIALLY DEFERRED`. Leaving it out gives a non-deferrable constraint (D4).
 - Invalid configuration throws immediately with a message saying how to fix it. That includes names over PostgreSQL's 63-byte identifier limit, which PostgreSQL would silently truncate, breaking D5's error mapping.
+
+---
+
+### D20 — D3 is enforced by types plus an immediate runtime check
+
+Decided 2026-09-15 (T2.3). This was the recommended option, picked without asking under the maintainer's standing instruction. Drizzle's types can't tell `timestamp()` from `timestamp({ withTimezone: true })`: in both 0.45.2 and 1.0.0-beta.22 the time zone is only a runtime flag, and the column type is identical. So the compile error D3 asks for is impossible without replacing Drizzle's column API.
+
+- **Types:** `tstzRange` only accepts timestamp columns. Any other column type is a compile error.
+- **Runtime:** a timestamp column without a time zone throws as soon as `tstzRange()` runs, which is when the schema file is imported. The message says to declare it as `timestamp({ withTimezone: true })`.
+- **Rejected:** a package-specific `timestamptz()` column helper with its own branded type. It would push users off Drizzle's column API, and it would depend on the brand surviving Drizzle's type transforms.
+
+---
+
+### D21 — Range helpers return a `RangeExpression`
+
+Decided 2026-09-15 (T2.3). Recommended option, picked without asking.
+
+- `tstzRange(lower, upper, { bounds? })`, `dateRange` and `int4Range` return a `RangeExpression`. That's a Drizzle `SQLWrapper`, so it works anywhere `sql` does, and it also records its range function, columns and bounds. `exclude()` accepts it in `with` and checks its columns belong to the table, both in types and at runtime. T2.4 can use those columns for D5's default name.
+- Bounds default to `[)` (D2); `[]`, `(]` and `()` are also allowed. Because bounds can only be one of those four literals, they're written into the SQL directly rather than sent as a query parameter, which DDL can't use.
+- Accepted columns: `tstzRange` takes timestamps with a time zone (D20), `dateRange` takes `date` columns, and `int4Range` takes `integer` and `serial` columns. Both bounds must come from the same table.
 
 ---
 

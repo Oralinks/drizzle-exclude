@@ -63,7 +63,9 @@ Constraint builder for a table, exported on its own next to that table rather th
 ### T2.3 — Range helpers
 `tstzRange`, `dateRange`, `int4Range`, with bound control defaulting to `[)` per D2. `tstzRange` rejects naive `timestamp` columns at the type level per D3.
 
-**Acceptance:** a `timestamp` column passed to `tstzRange` is a compile error, with a test asserting it (`expectTypeOf` or equivalent).
+**Acceptance:** a non-timestamp column passed to `tstzRange` is a compile error, and a `timestamp` column without a time zone throws immediately, each with a test (D20). Drizzle's types can't tell the two timestamp kinds apart.
+
+**Done 2026-09-15.** `tstzRange`, `dateRange` and `int4Range` return a `RangeExpression` (D21) with `[)` bounds by default. Type tests show a text column, a column from another table, or unknown bounds fail to compile. A timestamp without a time zone throws immediately. `exclude()` accepts ranges in `with` and rejects a range over another table, both in types and at runtime.
 
 ### T2.4 — SQL generation and snapshot tests
 Render correct DDL for a `drizzle-kit generate --custom` migration (D18). Snapshots compare against SQL taken from the PostgreSQL documentation, not against our own output.
