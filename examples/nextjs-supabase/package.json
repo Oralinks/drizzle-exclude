@@ -1,0 +1,30 @@
+{
+  "name": "drizzle-exclude-example-nextjs-supabase",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "pack-local": "pnpm --dir ../.. build && pnpm --dir ../.. pack --pack-destination examples/nextjs-supabase",
+    "constraint-sql": "node scripts/constraint-sql.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "drizzle-exclude": "file:./drizzle-exclude-0.0.0.tgz",
+    "drizzle-orm": "0.45.2",
+    "next": "16.3.5",
+    "postgres": "^3.4.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "0.31.10",
+    "typescript": "~6.0.3"
+  }
+}

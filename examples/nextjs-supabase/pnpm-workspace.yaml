@@ -1,0 +1,4 @@
+# This example is its own project, not part of the drizzle-exclude workspace.
+allowBuilds:
+  # drizzle-kit loads the TypeScript schema with esbuild; its install script sets up the native binary.
+  esbuild: true
