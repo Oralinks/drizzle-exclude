@@ -58,6 +58,8 @@ Constraint builder for a table, exported on its own next to that table rather th
 
 **Acceptance:** compiles, accepts a `pgTable` and its columns, fully typed, no `any` in the signature.
 
+**Done 2026-09-15.** `exclude(table, config)` returns an `ExclusionConstraint` (D19). Type tests show a column from another table, an empty `with`, GIN, or an unknown `deferrable` mode fail to compile. Runtime checks catch the same mistakes, plus same-named tables in other schemas and names over 63 bytes. The default name (D5) waits for T2.3/T2.4.
+
 ### T2.3 — Range helpers
 `tstzRange`, `dateRange`, `int4Range`, with bound control defaulting to `[)` per D2. `tstzRange` rejects naive `timestamp` columns at the type level per D3.
 
