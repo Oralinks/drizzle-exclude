@@ -147,6 +147,8 @@ Opens with the race condition, not the install command. Structure: the problem â
 
 **Acceptance:** a reader who has never heard of exclusion constraints understands the problem within the first screen.
 
+**Done 2026-09-15.** The README opens with the check-then-insert code and the negative control's real output from CI (10 bookings for one room), then the exclusion-constraint version (1 booking, 9 refused), before any install step. It goes on to the Drizzle issues, install (marked pre-release until T5.4), a four-step quick start, an API table for both entry points, and notes on `40P01`, time zones and naming. `tests/readme.test.ts` fails if the quick start's migration SQL stops matching what the package renders.
+
 ### T5.2 â€” `examples/`
 Runnable Next.js + Supabase booking demo. Minimal UI. Must use the published API surface, not internal imports.
 
