@@ -215,6 +215,19 @@ Decided 2026-09-15 (T2.3). Recommended option, picked without asking.
 
 ---
 
+### D22 — `exclusionConstraintSql()` renders one `ALTER TABLE … ADD CONSTRAINT` statement
+
+Decided 2026-09-15 (T2.4). Recommended options, picked without asking.
+
+- `exclusionConstraintSql(constraint, { casing? })` returns a single statement ending in `;`, for example `ALTER TABLE "bookings" ADD CONSTRAINT "…" EXCLUDE USING gist (…) WHERE (…) DEFERRABLE INITIALLY DEFERRED;`. It's an `ALTER TABLE` because drizzle-kit's own migration creates the table; this statement goes in a `drizzle-kit generate --custom` migration that runs after it.
+- `casing` must match the `casing` passed to `drizzle()` and drizzle-kit. It decides the column names in the SQL and in the default name.
+- Rendering uses Drizzle's own DDL mode, `PgDialect.sqlToQuery(sql, 'indexes')`, the same one drizzle-kit uses for index expressions: bare column names with casing applied. Query parameters are inlined, because DDL can't take them, without changing the caller's `sql` objects.
+- Plain columns are written bare. Ranges and other expressions are wrapped in parentheses, which PostgreSQL accepts for any expression element.
+- D5's default name is `{table}_{columns}_excl`, built from the database names of the columns in `with`, in order and without repeats, including columns inside ranges and `sql` expressions. `WHERE` columns don't count. With plain columns this matches PostgreSQL's own default name, for example `room_reservation_room_during_excl`. A default name over 63 bytes throws and asks for an explicit `name`.
+- Operators are written into the SQL exactly as given, so `exclude()` now only accepts PostgreSQL operator syntax: a run of operator characters such as `&&`, or `OPERATOR(schema.op)`. Anything else throws.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
