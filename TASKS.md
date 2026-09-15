@@ -113,6 +113,8 @@ Discriminated union per D7. Overlaps return, programmer errors throw.
 
 **Acceptance:** identical result shape from both drivers, proven by a shared test suite run twice.
 
+**Done 2026-09-15.** `tests/runtime/drivers.db.test.ts` runs one suite with `pg` and again with postgres.js, each against its own database: a raw error, a deferred violation at `COMMIT`, a role without `SELECT`, `catchOverlap()` through Drizzle, and 10 concurrent bookings. A final test asserts both drivers' results are identical. No adapter code was needed (D26). `pg` and `postgres` are now optional peer dependencies.
+
 ### T3.4 — Deferrable transaction helper
 For bulk reschedules where intermediate states legitimately overlap (D4).
 
