@@ -46,7 +46,7 @@ export interface ExclusionOverlap {
  * @example
  * ```ts
  * if (!result.ok && result.reason === 'contention') {
- *   return { status: 409, body: 'Busy, please try again' };
+ *   console.log('Busy, please try again');
  * }
  * ```
  */
@@ -88,16 +88,18 @@ export type ExclusionResult<T> = ExclusionSuccess<T> | ExclusionOverlap | Exclus
  * ```ts
  * import { catchOverlap } from 'drizzle-exclude';
  *
- * const result = await catchOverlap(
- *   db.insert(bookings).values({ roomId, startsAt, endsAt }).returning(),
- * );
+ * async function createBooking(roomId: string, startsAt: Date, endsAt: Date) {
+ *   const result = await catchOverlap(
+ *     db.insert(bookings).values({ roomId, startsAt, endsAt }).returning(),
+ *   );
  *
- * if (!result.ok) {
- *   return result.reason === 'overlap'
- *     ? { status: 409, body: 'That room is already booked for this time' }
- *     : { status: 503, body: 'Busy, please try again' };
+ *   if (!result.ok) {
+ *     return result.reason === 'overlap'
+ *       ? { status: 409, body: 'That room is already booked for this time' }
+ *       : { status: 503, body: 'Busy, please try again' };
+ *   }
+ *   return { status: 201, body: result.value[0] };
  * }
- * return { status: 201, body: result.value[0] };
  * ```
  */
 export async function catchOverlap<T>(write: PromiseLike<T> | (() => PromiseLike<T>)): Promise<ExclusionResult<T>> {

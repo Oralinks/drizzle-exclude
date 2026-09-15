@@ -21,6 +21,7 @@ const CORE_GIST_TYPE = /(?:range|multirange)$|^(?:point|box|circle|polygon|tsvec
  *
  * @example
  * ```ts
+ * const during = tstzRange(bookings.startsAt, bookings.endsAt);
  * needsBtreeGist(exclude(bookings, { using: 'gist', with: [[bookings.roomId, '='], [during, '&&']] })); // true
  * needsBtreeGist(exclude(bookings, { using: 'gist', with: [[during, '&&']] })); // false
  * ```
