@@ -6,6 +6,7 @@ import { bigint, boolean, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { exclude, exclusionMigrationSql, tstzRange } from '../src/index.js';
+import { raceAttempts } from '../src/testing/index.js';
 import { testPool } from './support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
@@ -72,20 +73,6 @@ beforeEach(async () => {
   await pool.query('TRUNCATE bookings_unguarded, bookings_guarded');
 });
 
-/** Returns a gate that opens once `size` callers are waiting at it. */
-function createBarrier(size: number): () => Promise<void> {
-  let arrived = 0;
-  let open: () => void = () => undefined;
-  const opened = new Promise<void>((resolve) => {
-    open = resolve;
-  });
-  return () => {
-    arrived += 1;
-    if (arrived === size) open();
-    return opened;
-  };
-}
-
 function sqlState(error: unknown): string | undefined {
   return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
     ? error.code
@@ -129,8 +116,10 @@ async function checkThenInsert(table: Table, waitForOthers: () => Promise<void>)
 }
 
 async function race(table: Table) {
-  const barrier = createBarrier(ATTEMPTS);
-  const outcomes = await Promise.all(Array.from({ length: ATTEMPTS }, () => checkThenInsert(table, barrier)));
+  // Each attempt checks, waits at the checkpoint until every attempt has checked, then inserts.
+  const { values: outcomes } = await raceAttempts(({ checkpoint }) => checkThenInsert(table, checkpoint), {
+    attempts: ATTEMPTS,
+  });
   const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM ${table} WHERE room_id = $1`, [
     ROOM_ID,
   ]);

@@ -1,0 +1,21 @@
+{
+  "name": "drizzle-exclude-example-testing-harness",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "pack-local": "pnpm --dir ../.. build && pnpm --dir ../.. pack --pack-destination examples/testing-harness",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "drizzle-exclude": "file:./drizzle-exclude-0.0.0.tgz",
+    "drizzle-orm": "0.45.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.1.0",
+    "@types/pg": "^8.23.1",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
+  }
+}

@@ -346,6 +346,18 @@ Decided 2026-09-15 (T4.1). Recommended options, picked without asking.
 
 ---
 
+### D29 — `raceAttempts()` is the concurrency harness, checked from an outside project
+
+Decided 2026-09-15 (T4.2). Recommended options, picked without asking.
+
+- `raceAttempts(attempt, { attempts? })` is exported from `drizzle-exclude/testing` (D11). It starts `attempts` copies of `attempt` together (default 10) and resolves with every outcome in attempt order: `results` (settled), `values` and `errors`. It never rejects.
+- Each attempt receives `checkpoint()`. Awaiting it holds that attempt until every other attempt has reached its checkpoint or finished without one, then releases them together. This is T1.4's barrier made general: it forces the worst-case interleaving deterministically, and an attempt that fails early can't leave the rest waiting.
+- It's framework-agnostic and knows nothing about databases. It pairs with `catchOverlap()` and `expectNoOverlap()`.
+- The package's own concurrency test uses it now, instead of its private barrier.
+- **Checked from outside:** `examples/testing-harness/` is a standalone project with its own `pnpm-workspace.yaml`, outside the package's build. It installs the packed tarball, imports only `drizzle-exclude` and `drizzle-exclude/testing`, and tests a different table, hot-desk reservations. There, `raceAttempts()` shows check-then-insert double-booking and `expectNoOverlap()` catches it; with the constraint applied through `exclusionMigrationSql()`, exactly one of eight simultaneous reservations wins. It doesn't run in CI yet; T5.2 decides how examples run there.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
