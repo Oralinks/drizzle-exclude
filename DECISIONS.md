@@ -137,7 +137,7 @@ Consequences:
 
 - The publish step runs `npm publish`, not `pnpm publish`. Trusted publishing needs npm CLI 11.5.1 or later, and pnpm's publish docs don't cover it.
 - Release builds don't restore a dependency cache (`package-manager-cache: false`), following npm's guidance on cache poisoning.
-- A trusted publisher is added from the package's settings page on npmjs.com, so the package appears to need to exist first. That would make the very first publish manual. Verify this at T5.4.
+- A trusted publisher is added from the package's settings page on npmjs.com, so the package has to exist first. Checked at T5.4: npm's docs only describe setting it up on an existing package. The first release therefore publishes with a token, from CI and still with provenance (D33).
 - When adding the trusted publisher, allow `npm publish`. Configurations created after 2026-09-03 only allow `npm stage publish` by default.
 - **npm does not generate provenance for packages published from private repositories.** The GitHub repo must be public before 0.1.0 is published.
 
@@ -382,6 +382,34 @@ Decided 2026-09-15 (T5.3). Recommended option, picked without asking.
 
 ---
 
+### D32 — `engines.node` is `>=22`, and `package.json` carries npm metadata
+
+Decided 2026-09-15 (T5.4 preparation). Recommended option, picked without asking.
+
+- The package declares `"engines": { "node": ">=22" }`, the oldest Node its CI tests (D13). Node 20 left support in April 2026. The runtime code may well work on older versions, but nothing tests that.
+- `repository`, `homepage`, `bugs`, `keywords` and `author` are filled in so the npm page links back to GitHub. Provenance also needs `repository` to point at the GitHub repository the package is published from.
+
+---
+
+### D33 — 0.1.0 is published from CI with a token and `--provenance`; later releases use trusted publishing
+
+Decided 2026-09-15 (T5.4). Amends D15. Recommended option, picked without asking.
+
+npm only lets you add a trusted publisher to a package that already exists (D15). The two ways to make the first release were:
+
+- **Publish 0.1.0 by hand from a laptop.** Simple, but a local publish gets no provenance, which fails T5.4's acceptance.
+- **Publish 0.1.0 from the tag workflow with a token.** npm's provenance docs cover this exact setup: `id-token: write` plus `npm publish --provenance --access public`, with the token in `NODE_AUTH_TOKEN`. Chosen.
+
+How it runs:
+
+1. The maintainer makes the GitHub repository public, because npm won't attach provenance otherwise (D15). They create a granular npm access token limited to publishing, and store it as the `NPM_TOKEN` repository secret. Only the maintainer handles the token.
+2. Pushing the `v0.1.0` tag runs `publish.yml`, which publishes with provenance.
+3. Afterwards, the maintainer adds `Oralinks/drizzle-exclude` / `publish.yml` as the package's trusted publisher, allowing `npm publish`. They then delete the `NPM_TOKEN` secret and revoke the token. npm uses trusted publishing whenever it's configured, so the workflow doesn't change.
+
+The workflow installs `npm@11` before publishing, so trusted publishing gets the npm version it needs (11.5.1 or later) whichever npm the runner's Node ships with.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
@@ -389,5 +417,5 @@ Decided 2026-09-15 (T5.3). Recommended option, picked without asking.
 - ~~Layer 1 direction~~ Resolved: D18.
 - Minimum supported Drizzle version. T2.1 found `check()`, `PgTableExtraConfigValue` and `getTableConfig` identical in 0.45.2 and 1.0.0-beta.22. Under D18 the package doesn't hook into drizzle-kit, so pick the earliest versions the builder compiles and tests against. T2.2 sets a provisional peer range of `^0.45.2`, the only version tested so far. Widen it once CI tests older releases or the 1.0 beta.
 - Whether `reserve()` belongs in v0.1 or whether the typed error mapping alone is enough to ship.
-- Published `engines` range. Dev tooling needs Node 22+ (D13), but the shipped runtime code may work on older Node. Decide once there is code to check.
+- ~~Published `engines` range~~ Resolved: `>=22`, the oldest Node tested (D32).
 - ~~How `reserve()` reports `40P01`~~ Resolved: a distinct `'contention'` result, with no automatic retry (D25).

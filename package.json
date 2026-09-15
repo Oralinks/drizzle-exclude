@@ -1,8 +1,33 @@
 {
   "name": "drizzle-exclude",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "PostgreSQL exclusion constraints for Drizzle ORM, with typed handling of 23P01 conflicts.",
   "license": "MIT",
+  "author": "Oralinks",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Oralinks/drizzle-exclude.git"
+  },
+  "homepage": "https://github.com/Oralinks/drizzle-exclude#readme",
+  "bugs": {
+    "url": "https://github.com/Oralinks/drizzle-exclude/issues"
+  },
+  "keywords": [
+    "drizzle",
+    "drizzle-orm",
+    "postgres",
+    "postgresql",
+    "exclusion-constraint",
+    "exclude",
+    "booking",
+    "double-booking",
+    "overlap",
+    "tstzrange",
+    "race-condition"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [
