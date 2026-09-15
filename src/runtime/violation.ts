@@ -60,6 +60,27 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+const MAX_CAUSE_DEPTH = 5;
+
+/**
+ * The error carrying PostgreSQL's fields for `code`: the error itself, or one of its causes.
+ * Drizzle wraps driver errors in `DrizzleQueryError`, keeping the original as `cause`. Internal.
+ */
+export function errorWithCode(error: unknown, code: string): Record<string, unknown> | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== 'object' || current === null) {
+      return undefined;
+    }
+    const fields = current as Record<string, unknown>;
+    if (fields.code === code) {
+      return fields;
+    }
+    current = fields.cause;
+  }
+  return undefined;
+}
+
 /** Index of the quote closing the quoted run starting at `start`, treating doubled quotes as escapes. */
 function skipQuoted(source: string, start: number): number | undefined {
   const quote = source[start];
@@ -173,8 +194,9 @@ function kindOf(message: string | undefined, detail: string | undefined): Exclus
 
 /**
  * Reads an exclusion-constraint violation (SQLSTATE `23P01`) from a driver error, without string
- * matching in your own code. Works with `pg` and postgres.js errors. Returns `undefined` for
- * anything else, including deadlocks (`40P01`, D16), and never throws.
+ * matching in your own code. Works with `pg` and postgres.js errors, including when Drizzle wraps
+ * them in `DrizzleQueryError`. Returns `undefined` for anything else, including deadlocks
+ * (`40P01`, D16), and never throws.
  *
  * @example
  * ```ts
@@ -191,11 +213,8 @@ function kindOf(message: string | undefined, detail: string | undefined): Exclus
  * ```
  */
 export function parseExclusionViolation(error: unknown): ExclusionViolation | undefined {
-  if (typeof error !== 'object' || error === null) {
-    return undefined;
-  }
-  const fields = error as Record<string, unknown>;
-  if (fields.code !== EXCLUSION_VIOLATION) {
+  const fields = errorWithCode(error, EXCLUSION_VIOLATION);
+  if (fields === undefined) {
     return undefined;
   }
 
