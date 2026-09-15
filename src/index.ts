@@ -1,3 +1,4 @@
+export { withDeferredConstraints } from './runtime/deferred.js';
 export {
   catchOverlap,
   type ExclusionContention,
