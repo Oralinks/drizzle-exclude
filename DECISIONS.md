@@ -333,6 +333,19 @@ A real overlap under deferral fails at `COMMIT` with `23P01`. Schema-qualified, 
 
 ---
 
+### D28 — `expectNoOverlap()` asks PostgreSQL which row pairs would clash
+
+Decided 2026-09-15 (T4.1). Recommended options, picked without asking.
+
+- `expectNoOverlap(db, constraint, { casing?, limit? })` is exported from `drizzle-exclude/testing` (D11). It resolves when no two rows would break the constraint, and otherwise rejects listing up to `limit` (default 10) clashing pairs as row JSON. It rejects with a plain `Error`, so it works with any test runner.
+- The constraint doesn't need to exist in the database. One query renders each `with` element and the `WHERE` exactly as `exclusionConstraintSql()` does, into a CTE, then joins that CTE to itself on `ctid` using the constraint's operators. So it handles columns, ranges and any `sql` expression without aliasing columns.
+- **Checked against PostgreSQL itself.** The test data covered an overlap, back-to-back bookings, a cancelled row, another room, a NULL room and a case-insensitive name clash. The query flagged exactly the pairs PostgreSQL named when adding the real constraint failed, and found nothing once they were removed, after which the constraint was created.
+- `db.execute()` resolves to `{ rows }` with node-postgres and to an array with postgres.js; both are read.
+- Programmer errors, such as something that isn't a constraint or a `limit` that isn't a positive integer, throw immediately.
+- The pair-finding query stays internal, because SCOPE lists only the assertion.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).

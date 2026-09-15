@@ -6,10 +6,10 @@ import { eq } from 'drizzle-orm';
 import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
 import { integer, type PgDatabase, type PgQueryResultHKT, pgTable, text } from 'drizzle-orm/pg-core';
 import { drizzle as drizzlePostgresJs } from 'drizzle-orm/postgres-js';
-import pg from 'pg';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { catchOverlap, exclude, exclusionMigrationSql, int4Range, withDeferredConstraints } from '../../src/index.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 
@@ -78,7 +78,7 @@ const drivers: { name: string; database: string; connect(url: string): Connectio
     name: 'pg',
     database: 'deferred_pg',
     connect(url) {
-      const pool = new pg.Pool({ connectionString: url });
+      const pool = testPool({ connectionString: url });
       return { ...operations(drizzleNodePg({ client: pool, casing: 'snake_case' })), end: () => pool.end() };
     },
   },
@@ -102,11 +102,11 @@ function databaseUrl(database: string): string {
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  const admin = new pg.Pool({ connectionString: container.getConnectionUri() });
+  const admin = testPool({ connectionString: container.getConnectionUri() });
   try {
     for (const driver of drivers) {
       await admin.query(`CREATE DATABASE ${driver.database}`);
-      const setup = new pg.Pool({ connectionString: databaseUrl(driver.database) });
+      const setup = testPool({ connectionString: databaseUrl(driver.database) });
       try {
         await setup.query(
           'CREATE TABLE slots (id text PRIMARY KEY, room integer NOT NULL, first_slot integer NOT NULL, last_slot integer NOT NULL)',

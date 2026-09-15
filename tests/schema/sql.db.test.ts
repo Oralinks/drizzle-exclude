@@ -7,6 +7,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { exclude, exclusionConstraintSql, tstzRange } from '../../src/index.js';
 import { archivedBookings, bookings, createTablesSql, holds, reservation, roomReservation } from './fixtures.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ROOM = '11111111-1111-1111-1111-111111111111';
@@ -16,7 +17,7 @@ let pool: pg.Pool;
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  pool = new pg.Pool({ connectionString: container.getConnectionUri() });
+  pool = testPool({ connectionString: container.getConnectionUri() });
   await pool.query(createTablesSql);
 });
 

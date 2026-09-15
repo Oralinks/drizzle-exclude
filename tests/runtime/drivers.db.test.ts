@@ -4,10 +4,10 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
 import { integer, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { drizzle as drizzlePostgresJs } from 'drizzle-orm/postgres-js';
-import pg from 'pg';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { catchOverlap, exclude, exclusionMigrationSql, int4Range, parseExclusionViolation, tstzRange } from '../../src/index.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ROOM_A = '11111111-1111-1111-1111-111111111111';
@@ -80,7 +80,7 @@ const drivers: Driver[] = [
     database: 'with_pg',
     rawConstraintField: 'constraint',
     connect(url) {
-      const pool = new pg.Pool({ connectionString: url, max: 12 });
+      const pool = testPool({ connectionString: url, max: 12 });
       const db = drizzleNodePg({ client: pool, casing: 'snake_case' });
       return {
         rawInsertBooking: (roomId, startsAt, endsAt) => pool.query(INSERT_BOOKING, [roomId, startsAt, endsAt]),
@@ -135,12 +135,12 @@ function databaseUrl(database: string, user?: string): string {
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  const admin = new pg.Pool({ connectionString: container.getConnectionUri() });
+  const admin = testPool({ connectionString: container.getConnectionUri() });
   try {
     await admin.query(`CREATE ROLE writer LOGIN PASSWORD 'writer'`);
     for (const driver of drivers) {
       await admin.query(`CREATE DATABASE ${driver.database}`);
-      const setup = new pg.Pool({ connectionString: databaseUrl(driver.database) });
+      const setup = testPool({ connectionString: databaseUrl(driver.database) });
       try {
         await setup.query(TABLES_SQL);
         await setup.query(exclusionMigrationSql(constraints, { casing: 'snake_case' }));

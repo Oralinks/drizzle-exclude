@@ -6,6 +6,7 @@ import { boolean, pgSchema, serial, timestamp, uuid } from 'drizzle-orm/pg-core'
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parseExclusionViolation } from '../../src/index.js';
+import { testPool } from '../support/pg.js';
 
 const POSTGRES_IMAGE = 'postgres:18.6-alpine';
 const ROOM = '11111111-1111-1111-1111-111111111111';
@@ -23,7 +24,7 @@ let pool: pg.Pool;
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
-  pool = new pg.Pool({ connectionString: container.getConnectionUri() });
+  pool = testPool({ connectionString: container.getConnectionUri() });
   await pool.query(`
     CREATE EXTENSION btree_gist;
     CREATE SCHEMA app;
@@ -138,7 +139,7 @@ describe('parseExclusionViolation() on live PostgreSQL errors', () => {
     const uri = new URL(container?.getConnectionUri() ?? '');
     uri.username = 'writer';
     uri.password = 'writer';
-    const writer = new pg.Pool({ connectionString: uri.toString() });
+    const writer = testPool({ connectionString: uri.toString() });
     try {
       expect(parseExclusionViolation(await errorFrom(overlappingBooking(writer)))).toEqual({
         kind: 'conflict',
