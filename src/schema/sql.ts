@@ -72,6 +72,37 @@ export function exclusionConstraintName(
   return name;
 }
 
+function dialectFor(options: ExclusionConstraintSqlOptions): PgDialect {
+  return new PgDialect(options.casing === undefined ? undefined : { casing: options.casing });
+}
+
+/** Renders SQL the way DDL needs it: bare column names with casing applied, parameters inlined. Internal. */
+export function renderDdl(value: SQL, options: ExclusionConstraintSqlOptions = {}): string {
+  // Wrapping in a fresh sql`` keeps the caller's own SQL objects free of inlined params.
+  return dialectFor(options).sqlToQuery(sql`${value}`.inlineParams(), 'indexes').sql;
+}
+
+/** One `with` element as DDL: a bare column, or a range or other expression in parentheses. Internal. */
+export function renderElement(
+  element: ExcludeElement<ExclusionConstraint['table']>,
+  options: ExclusionConstraintSqlOptions = {},
+): string {
+  if (is(element, RangeExpression)) {
+    return `(${renderDdl(element.getSQL(), options)})`;
+  }
+  if (is(element, SQL)) {
+    return `(${renderDdl(element, options)})`;
+  }
+  return renderDdl(sql`${element}`, options);
+}
+
+/** The constraint's table, schema-qualified when it has a schema. Internal. */
+export function renderTable(constraint: ExclusionConstraint, options: ExclusionConstraintSqlOptions = {}): string {
+  const dialect = dialectFor(options);
+  const { name, schema } = getTableConfig(constraint.table);
+  return schema === undefined ? dialect.escapeName(name) : `${dialect.escapeName(schema)}.${dialect.escapeName(name)}`;
+}
+
 /**
  * Renders an exclusion constraint as one `ALTER TABLE … ADD CONSTRAINT … EXCLUDE …;` statement,
  * ready to paste into a `drizzle-kit generate --custom` migration. drizzle-kit can't emit
@@ -97,31 +128,13 @@ export function exclusionConstraintSql(
   constraint: ExclusionConstraint,
   options: ExclusionConstraintSqlOptions = {},
 ): string {
-  const { casing } = options;
-  const dialect = new PgDialect(casing === undefined ? undefined : { casing });
-  const { config, table } = constraint;
-  const { name: tableName, schema } = getTableConfig(table);
-
-  // Wrapping in a fresh sql`` keeps the caller's own SQL objects free of inlined params.
-  const render = (value: SQL): string => dialect.sqlToQuery(sql`${value}`.inlineParams(), 'indexes').sql;
-
-  const elements = config.with.map(([element, operator]) => {
-    if (is(element, RangeExpression)) {
-      return `(${render(element.getSQL())}) WITH ${operator}`;
-    }
-    if (is(element, SQL)) {
-      return `(${render(element)}) WITH ${operator}`;
-    }
-    return `${render(sql`${element}`)} WITH ${operator}`;
-  });
-
+  const { config } = constraint;
+  const elements = config.with.map(([element, operator]) => `${renderElement(element, options)} WITH ${operator}`);
   const name = exclusionConstraintName(constraint, options);
-  const target =
-    schema === undefined ? dialect.escapeName(tableName) : `${dialect.escapeName(schema)}.${dialect.escapeName(tableName)}`;
 
-  let statement = `ALTER TABLE ${target} ADD CONSTRAINT ${dialect.escapeName(name)} EXCLUDE USING ${config.using} (${elements.join(', ')})`;
+  let statement = `ALTER TABLE ${renderTable(constraint, options)} ADD CONSTRAINT ${dialectFor(options).escapeName(name)} EXCLUDE USING ${config.using} (${elements.join(', ')})`;
   if (config.where !== undefined) {
-    statement += ` WHERE (${render(config.where)})`;
+    statement += ` WHERE (${renderDdl(config.where, options)})`;
   }
   if (config.deferrable !== undefined) {
     statement += ` DEFERRABLE INITIALLY ${config.deferrable === 'deferred' ? 'DEFERRED' : 'IMMEDIATE'}`;
