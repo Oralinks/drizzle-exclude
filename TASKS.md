@@ -99,6 +99,8 @@ Extract constraint name and conflicting key from the error `DETAIL`. Handle the 
 
 **Acceptance:** tested against real errors captured from Postgres, including at least one malformed-detail case.
 
+**Done 2026-09-15.** `parseExclusionViolation()` (D24). Unit tests use errors captured exactly from PostgreSQL 18.6: a conflicting insert, another session time zone, raw text values with commas, parentheses and quotes, an expression element, a deferred violation at `COMMIT`, adding a constraint over clashing rows, and the real no-key `DETAIL` a role without `SELECT` gets. They also cover postgres.js field names, seven malformed `DETAIL` shapes (none throw) and non-`23P01` errors. A database test reproduces every captured case live.
+
 ### T3.2 — Typed results
 Discriminated union per D7. Overlaps return, programmer errors throw.
 

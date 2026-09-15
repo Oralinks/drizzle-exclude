@@ -243,6 +243,27 @@ Measured on `postgres:18.6-alpine`: without `btree_gist`, GiST supports `=` only
 
 ---
 
+### D24 — `parseExclusionViolation()` reads 23P01 errors without guessing values apart
+
+Decided 2026-09-15 (T3.1). Recommended options, picked without asking. The design follows errors captured from PostgreSQL 18.6:
+
+| Case | Message / `DETAIL` |
+|---|---|
+| Conflicting insert | `conflicting key value violates exclusion constraint "…"` / `Key (room_id, tstzrange(starts_at, ends_at, '[)'::text))=(…) conflicts with existing key (…)=(…).` |
+| Deferred constraint at `COMMIT` | same as a conflicting insert |
+| Adding a constraint over rows that already clash | `could not create exclusion constraint "…"` / `Key (…)=(…) conflicts with key (…)=(…).` |
+| Role without `SELECT` on the table (per PostgreSQL's source, row-level security too) | `Key conflicts with existing key.` — no key at all |
+
+Values are printed raw: a text value `a, b) "c"='d'` appears unescaped, and timestamps follow the session's `TimeZone`.
+
+- `parseExclusionViolation(error)` returns `undefined` for anything that isn't SQLSTATE `23P01`, including `40P01` (D16), and never throws.
+- It reads `pg`'s field names (`constraint`, `table`, `schema`) and postgres.js's (`constraint_name`, `table_name`, `schema_name`); T3.3 tests both drivers. If the constraint field is missing, the name comes from the message.
+- `kind` is `'conflict'` for a rejected write and `'existing-rows'` when adding the constraint failed.
+- `conflictingKey` is `{ columns, attempted, existing }`, or `undefined` when `DETAIL` leaves the key out or has an unexpected shape. `columns` is split per element, respecting parentheses and quotes, because the column list is valid SQL. `attempted` and `existing` each stay one string, because raw values can contain commas, brackets and quotes, so no split would be reliable.
+- It's exported from the main entry point. A separate `./runtime` entry isn't needed yet.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
