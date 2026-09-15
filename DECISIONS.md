@@ -292,6 +292,26 @@ So:
 
 ---
 
+### D26 — Both drivers go through the same code, with no adapters
+
+Decided 2026-09-15 (T3.3). Recommended options, picked without asking.
+
+A shared test suite runs the same checks with `pg` 8.23 and postgres.js 3.4.9, each against its own database with identical tables:
+
+- a raw driver error
+- a deferred violation at `COMMIT`
+- a role without `SELECT` on the table
+- `catchOverlap()` through each driver's Drizzle integration
+- 10 concurrent bookings
+
+The parsed results are identical, field for field.
+
+- **The drivers differ only in field names.** `pg` uses `constraint`, `table` and `schema`; postgres.js uses `constraint_name`, `table_name` and `schema_name`. `parseExclusionViolation()` already reads both (D24), so no per-driver adapter code is needed.
+- **Drizzle wraps errors from both drivers in `DrizzleQueryError`**, since both go through `PgPreparedQuery.queryWithCache`, and the parser unwraps it.
+- **Optional peer dependencies:** `pg` and `postgres`, with drizzle-orm 0.45.2's own ranges (`>=8` and `>=3`). The package imports neither; the entries document which drivers it's tested with.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
