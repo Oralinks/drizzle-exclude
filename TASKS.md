@@ -179,6 +179,12 @@ Not code, but the part that makes it a portfolio piece rather than a private rep
 ### T6.1 — Comment on Drizzle issues #2813, #3388, #4939
 Short, useful, no marketing. Describe what it does and link it.
 
+**Done 2026-09-15.** One comment on each issue, posted as Oralinks, each saying the author wrote the package: [#2813](https://github.com/drizzle-team/drizzle-orm/issues/2813#issuecomment-5681608436), [#3388](https://github.com/drizzle-team/drizzle-orm/issues/3388#issuecomment-5681609850), [#4939](https://github.com/drizzle-team/drizzle-orm/issues/4939#issuecomment-5681611079).
+- The #3388 and #4939 comments show that issue's own constraint written with `exclude()`. Both snippets were run against the published 0.1.0 first, and the #4939 SQL matches the migration its author wrote by hand.
+- Before posting, the README gained a line saying the package isn't affiliated with the Drizzle team (PR #19).
+- Checked beforehand: drizzle-orm is Apache-2.0, and no Drizzle release up to 1.0.0-rc.4 supports exclusion constraints.
+- Don't follow up or bump these threads.
+
 ### T6.2 — Write the post
 "Your booking system has a race condition you can't see in testing." Lead with the negative-control test output. Post to dev.to, share in the Drizzle Discord.
 
