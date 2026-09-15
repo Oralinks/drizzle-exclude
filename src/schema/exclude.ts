@@ -1,5 +1,7 @@
 import { entityKind, getTableName, is, SQL } from 'drizzle-orm';
 import { type AnyPgColumn, PgColumn, PgTable } from 'drizzle-orm/pg-core';
+import { fail } from './fail.js';
+import { RangeExpression } from './ranges.js';
 
 /**
  * Index methods that can back an exclusion constraint. PostgreSQL needs an
@@ -25,16 +27,20 @@ export type ExcludeIndexMethod = 'gist' | 'spgist' | 'btree' | 'hash';
 export type ExcludeOperator = '=' | '<>' | '&&' | '-|-' | '~=' | (string & {});
 
 /**
- * Left-hand side of a `with` pair: a column of the constrained table, or a
- * `sql` expression such as a range built from two columns.
+ * Left-hand side of a `with` pair: a column of the constrained table, a range over
+ * its columns such as {@link tstzRange}, or any other `sql` expression.
  *
  * @example
  * ```ts
  * const column: ExcludeElement<typeof bookings> = bookings.roomId;
- * const range: ExcludeElement<typeof bookings> = sql`tstzrange(${bookings.startsAt}, ${bookings.endsAt}, '[)')`;
+ * const range: ExcludeElement<typeof bookings> = tstzRange(bookings.startsAt, bookings.endsAt);
+ * const expression: ExcludeElement<typeof bookings> = sql`lower(${bookings.code})`;
  * ```
  */
-export type ExcludeElement<TTable extends PgTable> = AnyPgColumn<{ tableName: TTable['_']['name'] }> | SQL;
+export type ExcludeElement<TTable extends PgTable> =
+  | AnyPgColumn<{ tableName: TTable['_']['name'] }>
+  | RangeExpression<TTable['_']['name']>
+  | SQL;
 
 /**
  * One `[element, operator]` pair. Two rows conflict when every pair's operator
@@ -56,7 +62,7 @@ export type ExcludePair<TTable extends PgTable> = readonly [element: ExcludeElem
  *   using: 'gist',
  *   with: [
  *     [bookings.roomId, '='],
- *     [sql`tstzrange(${bookings.startsAt}, ${bookings.endsAt}, '[)')`, '&&'],
+ *     [tstzRange(bookings.startsAt, bookings.endsAt), '&&'],
  *   ],
  * };
  * ```
@@ -100,10 +106,6 @@ const INDEX_METHODS: readonly string[] = ['gist', 'spgist', 'btree', 'hash'] sat
 const DEFERRABLE_MODES: readonly string[] = ['immediate', 'deferred'];
 const MAX_IDENTIFIER_BYTES = 63;
 
-function fail(message: string): never {
-  throw new Error(`drizzle-exclude: ${message}`);
-}
-
 function isArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
@@ -118,7 +120,7 @@ function isArray(value: unknown): value is readonly unknown[] {
  * ```ts
  * import { sql } from 'drizzle-orm';
  * import { boolean, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
- * import { exclude } from 'drizzle-exclude';
+ * import { exclude, tstzRange } from 'drizzle-exclude';
  *
  * export const bookings = pgTable('bookings', {
  *   id: uuid().defaultRandom().primaryKey(),
@@ -133,7 +135,7 @@ function isArray(value: unknown): value is readonly unknown[] {
  *   using: 'gist',
  *   with: [
  *     [bookings.roomId, '='],
- *     [sql`tstzrange(${bookings.startsAt}, ${bookings.endsAt}, '[)')`, '&&'],
+ *     [tstzRange(bookings.startsAt, bookings.endsAt), '&&'],
  *   ],
  *   where: sql`not ${bookings.cancelled}`,
  * });
@@ -184,8 +186,18 @@ export function exclude<TTable extends PgTable>(table: TTable, config: ExcludeCo
           `exclude() on "${tableName}": ${position} uses column "${element.name}" from table "${getTableName(element.table)}". Every column must belong to "${tableName}".`,
         );
       }
+    } else if (is(element, RangeExpression)) {
+      for (const column of element.columns) {
+        if (column.table !== table) {
+          fail(
+            `exclude() on "${tableName}": ${position} is a range over column "${column.name}" from table "${getTableName(column.table)}". Every column must belong to "${tableName}".`,
+          );
+        }
+      }
     } else if (!is(element, SQL)) {
-      fail(`exclude() on "${tableName}": ${position} must start with a column of "${tableName}" or a sql\`\` expression.`);
+      fail(
+        `exclude() on "${tableName}": ${position} must start with a column of "${tableName}", a range such as tstzRange(), or a sql\`\` expression.`,
+      );
     }
 
     if (typeof operator !== 'string' || operator.trim() === '') {

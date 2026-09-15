@@ -7,3 +7,12 @@ export {
   type ExcludePair,
   ExclusionConstraint,
 } from './schema/exclude.js';
+export {
+  dateRange,
+  int4Range,
+  type RangeBounds,
+  RangeExpression,
+  type RangeFunction,
+  type RangeOptions,
+  tstzRange,
+} from './schema/ranges.js';
