@@ -164,6 +164,12 @@ Changeset, tag, publish workflow with provenance.
 
 **Acceptance:** `npm install drizzle-exclude` works in a clean project. Provenance badge shows on the npm page.
 
+**Done 2026-09-15.** `drizzle-exclude@0.1.0` is on npm, published by `publish.yml` from the `v0.1.0` tag with a one-off token and `--provenance` (D33).
+- In a clean project, `npm install drizzle-exclude@0.1.0 drizzle-orm@0.45.2` worked, and both entry points loaded from ESM and CJS.
+- `npm audit signatures` reports verified registry signatures and attestations.
+- The registry holds an SLSA provenance v1 attestation for `Oralinks/drizzle-exclude`, `refs/tags/v0.1.0`, `.github/workflows/publish.yml`. The npm page's provenance badge is drawn from that attestation; the page itself wasn't opened.
+- The `NPM_TOKEN` secret is deleted. Adding the trusted publisher and revoking the token are still to do.
+
 ---
 
 ## Phase 6 — Distribution
