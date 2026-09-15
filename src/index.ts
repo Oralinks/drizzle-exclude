@@ -16,3 +16,4 @@ export {
   type RangeOptions,
   tstzRange,
 } from './schema/ranges.js';
+export { exclusionConstraintSql, type ExclusionConstraintSqlOptions } from './schema/sql.js';
