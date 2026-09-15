@@ -106,6 +106,8 @@ Discriminated union per D7. Overlaps return, programmer errors throw.
 
 **Acceptance:** exhaustive `switch` on the result type compiles with no fallthrough.
 
+**Done 2026-09-15.** `catchOverlap()` returns `ExclusionResult<T>`: success, `'overlap'` or `'contention'` (D25). A unit test switches on `reason` exhaustively with a `never` default, and compiles under `noFallthroughCasesInSwitch`. Other tests cover raw and Drizzle-wrapped errors and rethrowing everything else. A database test runs real Drizzle inserts: a free slot, a taken slot, back-to-back bookings, a duplicate primary key that's rethrown, and 10 concurrent bookings that all resolve with exactly one success.
+
 ### T3.3 — Driver adapters
 `pg` and `postgres.js`. These surface errors differently — normalise both.
 
