@@ -35,6 +35,8 @@ guarded: { winners: 1, failureCodes: [ '23P01', '23P01', '23P01', '23P01', '23P0
 
 Drizzle can't declare exclusion constraints ([#2813](https://github.com/drizzle-team/drizzle-orm/issues/2813), [#3388](https://github.com/drizzle-team/drizzle-orm/issues/3388), [#4939](https://github.com/drizzle-team/drizzle-orm/issues/4939)). People end up hand-editing migrations, and their schema file stops describing their table. `drizzle-exclude` fills that gap and handles what happens next: turning the refusal into a typed result, and testing it.
 
+`drizzle-exclude` is an independent community package. It isn't made, maintained or endorsed by the Drizzle team.
+
 ## Install
 
 ```bash
