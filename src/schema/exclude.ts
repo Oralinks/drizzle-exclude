@@ -35,7 +35,7 @@ export type ExcludeOperator = '=' | '<>' | '&&' | '-|-' | '~=' | (string & {});
  * ```ts
  * const column: ExcludeElement<typeof bookings> = bookings.roomId;
  * const range: ExcludeElement<typeof bookings> = tstzRange(bookings.startsAt, bookings.endsAt);
- * const expression: ExcludeElement<typeof bookings> = sql`lower(${bookings.code})`;
+ * const expression: ExcludeElement<typeof bookings> = sql`date_trunc('day', ${bookings.startsAt})`;
  * ```
  */
 export type ExcludeElement<TTable extends PgTable> =
