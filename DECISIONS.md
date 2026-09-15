@@ -312,6 +312,27 @@ The parsed results are identical, field for field.
 
 ---
 
+### D27 — `withDeferredConstraints()` defers named constraints inside a Drizzle transaction
+
+Decided 2026-09-15 (T3.4). Recommended options, picked without asking.
+
+Measured on `postgres:18.6-alpine`, moving three rows in a cycle (A to B's slot, B to C's, C to A's) inside one transaction:
+
+| Constraint timing | Three separate UPDATEs | After `SET CONSTRAINTS … DEFERRED` | One UPDATE with `CASE` |
+|---|---|---|---|
+| Not deferrable | fails `23P01` | fails `42809`, not deferrable | fails `23P01` |
+| `DEFERRABLE INITIALLY IMMEDIATE` | fails `23P01` | works | works (checked at end of statement) |
+| `DEFERRABLE INITIALLY DEFERRED` | works | works | works |
+
+A real overlap under deferral fails at `COMMIT` with `23P01`. Schema-qualified, quoted names work in `SET CONSTRAINTS`.
+
+- `withDeferredConstraints(db, constraints, work, { casing? })` opens a Drizzle transaction, runs `SET CONSTRAINTS … DEFERRED` for the given constraints, runs `work(tx)`, and returns the same `ExclusionResult` as `catchOverlap()` (D25). An overlap found at `COMMIT` is `'overlap'`; an error from `work` is rethrown after the rollback. It never retries.
+- Names come from D5/D22's naming, are schema-qualified when the table has a schema, and appear once each.
+- A constraint without `deferrable` in its `exclude()` config throws immediately, before any transaction starts. PostgreSQL can't defer it, and changing deferrability means dropping and re-adding the constraint. An empty list throws too.
+- It takes any Drizzle Postgres database (`PgDatabase`), so it works with both drivers (D26), and is tested with each.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
