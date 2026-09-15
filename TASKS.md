@@ -120,6 +120,8 @@ For bulk reschedules where intermediate states legitimately overlap (D4).
 
 **Acceptance:** a test moves three bookings in a cycle — A→B, B→C, C→A — which is impossible without deferral.
 
+**Done 2026-09-15.** `withDeferredConstraints()` (D27). The database test runs with both drivers: the cycle fails as `'overlap'` in a plain transaction and succeeds with the constraint deferred; a final arrangement that still clashes returns `'overlap'` with rows unchanged; an error thrown by the work is rethrown and rolled back. Unit tests cover the exact `SET CONSTRAINTS` statement and the immediate errors for non-deferrable constraints and an empty list.
+
 ---
 
 ## Phase 4 — Testing kit
