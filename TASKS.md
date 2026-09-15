@@ -81,6 +81,8 @@ Emits `CREATE EXTENSION IF NOT EXISTS btree_gist`. Clear, actionable error if a 
 
 **Acceptance:** the error message tells the user exactly what to add and where.
 
+**Done 2026-09-15.** `needsBtreeGist()`, `btreeGistSql()` and `exclusionMigrationSql()` (D23). A database test on a fresh PostgreSQL without the extension shows the raw `42704` error doesn't mention `btree_gist`. With `btreeGist: 'require'` the migration stops with a message naming the constraint and a hint saying to add `CREATE EXTENSION IF NOT EXISTS btree_gist;` at the top of the migration. `'create'` installs the extension and the constraint rejects overlaps.
+
 ### T2.6 — Concurrency test uses the builder
 Replace the hand-written SQL in T1.4 with SQL rendered by the builder.
 

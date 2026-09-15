@@ -228,6 +228,21 @@ Decided 2026-09-15 (T2.4). Recommended options, picked without asking.
 
 ---
 
+### D23 — `btree_gist` is handled inside the rendered migration
+
+Decided 2026-09-15 (T2.5). Recommended options, picked without asking.
+
+Measured on `postgres:18.6-alpine`: without `btree_gist`, GiST supports `=` only on range and multirange types. `uuid`, `text`, `integer`, `timestamptz` and other scalars fail with `42704: data type uuid has no default operator class for access method "gist"`, which doesn't mention the extension. `btree_gist` 1.8 adds `=` for 26 scalar types, including enums, integers, numerics, `text`, `uuid`, dates, times, timestamps, `inet` and `bytea`.
+
+- `needsBtreeGist(constraint)` is true for a `gist` constraint with any `with` element that isn't a range: a column whose type isn't a range, multirange, or one of PostgreSQL's built-in GiST types (`point`, `box`, `circle`, `polygon`, `tsvector`, `tsquery`), or any `sql` expression. An expression's type is unknown, and an unneeded `IF NOT EXISTS` is harmless.
+- `btreeGistSql()` returns `CREATE EXTENSION IF NOT EXISTS btree_gist;`.
+- `exclusionMigrationSql(constraints, { casing?, btreeGist? })` returns a whole custom migration, with statements separated by drizzle-kit's `--> statement-breakpoint` so drizzle-orm's migrator runs them one by one.
+  - `btreeGist: 'create'` (the default) puts the extension statement first when any constraint needs it.
+  - `btreeGist: 'require'` puts a `DO` block first instead. If the extension is missing, it stops the migration (SQLSTATE `P0001`) with a message naming the constraints and a hint saying to add `CREATE EXTENSION IF NOT EXISTS btree_gist;` at the top of the migration or enable the extension first. This is for hosts such as Supabase, where extensions are enabled outside migrations.
+- The package never runs any of this itself (D8). It only goes into a migration the user reviews and runs.
+
+---
+
 ## Open questions
 
 - ~~Does PGlite support `btree_gist`?~~ Yes, resolved in T1.1 (see D10).
